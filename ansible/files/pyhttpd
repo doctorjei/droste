@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Lightweight HTTP file server.
+
+Serves files from a directory with automatic directory listings.
+Compatible with common busybox httpd flags.
+
+Examples:
+  pyhttpd                         # serve current dir on port 8080
+  pyhttpd -p 3000                 # serve on port 3000
+  pyhttpd -h /var/www -p 8000     # serve /var/www on port 8000
+  pyhttpd -b 0.0.0.0 -p 80       # bind to all interfaces
+  pyhttpd -v                      # verbose request logging
+"""
+import argparse, functools, os, sys
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+
+class QuietHandler(SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+
+p = argparse.ArgumentParser(
+    prog="pyhttpd",
+    description="Lightweight HTTP file server.",
+    epilog="Installed as 'httpd' via update-alternatives.",
+    add_help=False,
+)
+p.add_argument("--help", action="help", help="show this help message and exit")
+p.add_argument("-p", type=int, default=8080, metavar="PORT",
+               help="port to listen on (default: 8080)")
+p.add_argument("-b", default="127.0.0.1", metavar="ADDR",
+               help="address to bind to (default: 127.0.0.1)")
+p.add_argument("-h", dest="home", default=".", metavar="DIR",
+               help="document root directory (default: .)")
+p.add_argument("-v", action="store_true",
+               help="verbose logging of requests")
+p.add_argument("-f", action="store_true",
+               help="foreground (default, kept for busybox compat)")
+args = p.parse_args()
+
+os.chdir(args.home)
+handler = SimpleHTTPRequestHandler if args.v else QuietHandler
+handler = functools.partial(handler, directory=args.home)
+server = HTTPServer((args.b, args.p), handler)
+print(f"Serving {os.path.abspath(args.home)} on http://{args.b}:{args.p}")
+try:
+    server.serve_forever()
+except KeyboardInterrupt:
+    print("\nStopped.")

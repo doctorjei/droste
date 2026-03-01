@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""Extract printable strings from binary files.
+
+Lightweight replacement for GNU binutils 'strings'. Searches each
+file (or stdin) for sequences of printable characters and prints
+them, one per line.
+
+Examples:
+  pystrings /usr/bin/ls           # printable strings (4+ chars)
+  pystrings -n 8 firmware.bin     # only strings 8+ chars long
+  pystrings -t x core.dump        # show hex offsets
+  cat blob | pystrings -          # read from stdin
+"""
+import re, sys, argparse
+
+p = argparse.ArgumentParser(
+    prog="pystrings",
+    description="Extract printable strings from binary files.",
+    epilog="Installed as 'strings' via update-alternatives.",
+)
+p.add_argument("files", nargs="*", default=["-"], metavar="FILE",
+               help="files to scan (default: stdin)")
+p.add_argument("-n", type=int, default=4, metavar="MIN",
+               help="minimum string length (default: 4)")
+p.add_argument("-t", choices=["d", "o", "x"], default=None, metavar="FMT",
+               help="print offset before each string: d=decimal, o=octal, x=hex")
+args = p.parse_args()
+
+pat = re.compile(b"[\x20-\x7e]{%d,}" % args.n)
+fmt = {"d": lambda o: f"{o:7d} ", "o": lambda o: f"{o:7o} ", "x": lambda o: f"{o:7x} "}
+for f in args.files:
+    data = sys.stdin.buffer.read() if f == "-" else open(f, "rb").read()
+    for m in pat.finditer(data):
+        prefix = fmt[args.t](m.start()) if args.t else ""
+        print(f"{prefix}{m.group().decode()}")

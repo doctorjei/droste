@@ -1,0 +1,349 @@
+---
+# Ansible playbook for droste-thread: container-ready Debian 12 base image.
+#
+# Provisions a minimal Debian 12 system with LXC, Podman, and networking
+# primitives for nested container testing.
+#
+# Usage:
+#   ansible-playbook droste-thread.yml -i 'hostname,' -u root
+
+- name: Provision droste-thread base image
+  hosts: all
+  become: true
+
+  tasks:
+    # ── Strip documentation ─────────────────────────────────────────
+    - name: Configure dpkg to exclude docs
+      ansible.builtin.copy:
+        dest: /etc/dpkg/dpkg.cfg.d/01-nodoc
+        content: |
+          path-exclude /usr/share/doc/*
+          path-exclude /usr/share/man/*
+          path-exclude /usr/share/info/*
+          path-exclude /usr/share/locale/*
+          path-include /usr/share/locale/en*
+          path-include /usr/share/locale/zh*
+          path-include /usr/share/locale/hi*
+          path-include /usr/share/locale/es*
+          path-include /usr/share/locale/ar*
+          path-include /usr/share/locale/fr*
+          path-include /usr/share/locale/bn*
+          path-include /usr/share/locale/pt*
+          path-include /usr/share/locale/id*
+          path-include /usr/share/locale/ur*
+          path-include /usr/share/locale/de*
+          path-include /usr/share/locale/ja*
+          path-include /usr/share/locale/ko*
+        mode: "0644"
+
+    - name: Remove existing documentation
+      ansible.builtin.shell: |
+        rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+        find /usr/share/locale -mindepth 1 -maxdepth 1 \
+          ! -name 'en*' ! -name 'zh*' ! -name 'hi*' ! -name 'es*' \
+          ! -name 'ar*' ! -name 'fr*' ! -name 'bn*' ! -name 'pt*' \
+          ! -name 'id*' ! -name 'ur*' ! -name 'de*' ! -name 'ja*' \
+          ! -name 'ko*' -exec rm -rf {} +
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    # ── Core system packages ────────────────────────────────────────
+    - name: Install system packages
+      ansible.builtin.apt:
+        name:
+          # Containers
+          - lxc
+          - podman
+          - fuse-overlayfs
+          - slirp4netns
+          - uidmap
+          - systemd-container
+          # Networking
+          - iproute2
+          - dnsmasq
+          - nftables
+          - ipcalc
+          - ipvsadm
+          # Utilities
+          - curl
+          - jq
+          - rsync
+          - tmux
+          - smbclient
+          - git
+          - wget
+          - make
+          - file
+          - netcat-openbsd
+          - dnsutils
+          - tree
+          - unzip
+          - zip
+          - pipx
+          - htop
+          - patch
+          - bc
+          - inetutils-telnet
+          - ssh-import-id
+          - molly-guard
+          - debootstrap
+          - sshpass
+          - xmlstarlet
+          - lsof
+          - strace
+          - sysstat
+          - iotop
+          - iftop
+          - psmisc
+          - expect
+          - moreutils
+          - rename
+          - entr
+          - jo
+          - whois
+          - sqlite3
+          - atop
+          - etckeeper
+          - tftpd-hpa
+          # Remote FS
+          - cifs-utils
+          - nfs-common
+          - sshfs
+          # Filesystem
+          - acl
+          - attr
+          # VPN
+          - wireguard-tools
+          # Firewall
+          - conntrack
+          - ipset
+          # Socket Swiss army knife
+          - socat
+          # Ping / ARP
+          - fping
+          - iputils-arping
+          # Parallel execution
+          - parallel
+          # Watchdog
+          - watchdog
+          # DNS/filesystem monitoring
+          - dnstop
+          - fatrace
+          - inotify-tools
+          # INI file editing
+          - crudini
+          # Container /proc fix
+          - lxcfs
+          # Debugging
+          - ltrace
+          # Pipe
+          - pv
+          # Hex tools
+          - bsdextrautils
+          - xxd
+          # System
+          - locales
+          - qemu-guest-agent
+        state: present
+        update_cache: true
+        install_recommends: false
+
+    # ── Locales ───────────────────────────────────────────────────────
+    - name: Generate locales
+      ansible.builtin.shell: |
+        cat > /etc/locale.gen.droste <<'LOCALES'
+        en_US.UTF-8 UTF-8
+        zh_CN.UTF-8 UTF-8
+        zh_TW.UTF-8 UTF-8
+        hi_IN.UTF-8 UTF-8
+        es_ES.UTF-8 UTF-8
+        ar_SA.UTF-8 UTF-8
+        fr_FR.UTF-8 UTF-8
+        bn_IN.UTF-8 UTF-8
+        pt_BR.UTF-8 UTF-8
+        pt_PT.UTF-8 UTF-8
+        id_ID.UTF-8 UTF-8
+        ur_PK.UTF-8 UTF-8
+        de_DE.UTF-8 UTF-8
+        ja_JP.UTF-8 UTF-8
+        ko_KR.UTF-8 UTF-8
+        LOCALES
+        cat /etc/locale.gen.droste >> /etc/locale.gen
+        rm /etc/locale.gen.droste
+        locale-gen
+      args:
+        executable: /bin/bash
+        creates: /usr/lib/locale/en_US.utf8
+      changed_when: true
+
+    # ── Python micro-tools (lightweight replacements) ──────────────
+    - name: Install pystrings
+      ansible.builtin.copy:
+        src: pystrings
+        dest: /usr/local/bin/pystrings
+        mode: "0755"
+
+    - name: Register pystrings as strings alternative
+      ansible.builtin.command:
+        cmd: update-alternatives --install /usr/bin/strings strings /usr/local/bin/pystrings 10
+      changed_when: true
+
+    - name: Install pyhttpd
+      ansible.builtin.copy:
+        src: pyhttpd
+        dest: /usr/local/bin/pyhttpd
+        mode: "0755"
+
+    - name: Register pyhttpd as httpd alternative
+      ansible.builtin.command:
+        cmd: update-alternatives --install /usr/bin/httpd httpd /usr/local/bin/pyhttpd 10
+      changed_when: true
+
+    # ── Agent user ──────────────────────────────────────────────────
+    - name: Remove existing UID 1000 user (if not agent)
+      ansible.builtin.shell: |
+        existing_user=$(getent passwd 1000 | cut -d: -f1)
+        if [ -n "$existing_user" ] && [ "$existing_user" != "agent" ]; then
+          userdel -r "$existing_user"
+          echo "removed $existing_user"
+        fi
+      args:
+        executable: /bin/bash
+      register: uid_user_removal
+      changed_when: uid_user_removal.stdout | length > 0
+
+    - name: Remove existing GID 1000 group (if not agent)
+      ansible.builtin.shell: |
+        existing_group=$(getent group 1000 | cut -d: -f1)
+        if [ -n "$existing_group" ] && [ "$existing_group" != "agent" ]; then
+          groupdel "$existing_group"
+          echo "removed $existing_group"
+        fi
+      args:
+        executable: /bin/bash
+      register: gid_group_removal
+      changed_when: gid_group_removal.stdout | length > 0
+
+    - name: Create agent group
+      ansible.builtin.group:
+        name: agent
+        gid: 1000
+        state: present
+
+    - name: Create agent user
+      ansible.builtin.user:
+        name: agent
+        uid: 1000
+        group: agent
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Grant agent passwordless sudo
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/agent
+        content: "agent ALL=(ALL) NOPASSWD:ALL\n"
+        mode: "0440"
+        owner: root
+        group: root
+
+    # ── Rootless Podman ─────────────────────────────────────────────
+    - name: Configure subuid for agent
+      ansible.builtin.lineinfile:
+        path: /etc/subuid
+        line: "agent:100000:65536"
+        create: true
+        mode: "0644"
+
+    - name: Configure subgid for agent
+      ansible.builtin.lineinfile:
+        path: /etc/subgid
+        line: "agent:100000:65536"
+        create: true
+        mode: "0644"
+
+    - name: Create containers config directory
+      ansible.builtin.file:
+        path: /home/agent/.config/containers
+        state: directory
+        owner: agent
+        group: agent
+        mode: "0755"
+
+    - name: Write podman storage config
+      ansible.builtin.copy:
+        dest: /home/agent/.config/containers/storage.conf
+        content: |
+          [storage]
+          driver = "overlay"
+
+          [storage.options.overlay]
+          mount_program = "/usr/bin/fuse-overlayfs"
+        owner: agent
+        group: agent
+        mode: "0644"
+
+    # ── SSH hardening ───────────────────────────────────────────────
+    - name: Disable root login via SSH
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PermitRootLogin"
+        line: "PermitRootLogin no"
+
+    - name: Disable password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PasswordAuthentication"
+        line: "PasswordAuthentication no"
+
+    - name: Enable and start sshd
+      ansible.builtin.systemd:
+        name: ssh
+        enabled: true
+        state: started
+
+    # ── Networking ──────────────────────────────────────────────────
+    - name: Enable IP forwarding
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/99-droste.conf
+        content: |
+          net.ipv4.ip_forward = 1
+          net.ipv6.conf.all.forwarding = 1
+        mode: "0644"
+
+    - name: Apply sysctl settings
+      ansible.builtin.command: sysctl --system
+      changed_when: true
+
+    # ── Image cleanup ───────────────────────────────────────────────
+    - name: Clean apt cache
+      ansible.builtin.apt:
+        autoclean: true
+
+    - name: Remove apt lists
+      ansible.builtin.shell: rm -rf /var/lib/apt/lists/*
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Clear machine-id for cloud-init first-boot
+      ansible.builtin.copy:
+        dest: /etc/machine-id
+        content: ""
+        mode: "0444"
+
+    - name: Truncate logs
+      ansible.builtin.shell: find /var/log -type f -exec truncate -s 0 {} +
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Zero free space for compression
+      ansible.builtin.shell: |
+        dd if=/dev/zero of=/var/tmp/zeros bs=1M 2>/dev/null || true
+        rm -f /var/tmp/zeros
+        sync
+      args:
+        executable: /bin/bash
+      changed_when: true
