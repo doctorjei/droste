@@ -116,7 +116,7 @@ echo ""
 echo "Utilities:"
 check "ccache available"                "command -v ccache"
 check "bear available"                  "command -v bear"
-check "libtool available"               "command -v libtool"
+check "libtoolize available"             "command -v libtoolize"
 echo ""
 
 # ── Summary ───────────────────────────────────────────────────────────
