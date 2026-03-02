@@ -1,5 +1,5 @@
 ---
-# Ansible playbook for droste-full: VM-capable layer on top of droste-thread.
+# Ansible playbook for droste-yarn: VM-capable layer on top of droste-thread.
 #
 # Adds QEMU/KVM for nested virtualization, Ansible for automation, and
 # cloud-image-utils for creating cloud-init ISOs inside the VM.
@@ -8,9 +8,9 @@
 # It only installs Phase 2 additions — all Phase 1 config is inherited.
 #
 # Usage:
-#   ansible-playbook droste-full.yml -i 'hostname,' -u root
+#   ansible-playbook droste-yarn.yml -i 'hostname,' -u root
 
-- name: Provision droste-full VM layer
+- name: Provision droste-yarn VM layer
   hosts: all
   become: true
 
@@ -60,8 +60,12 @@
           - nethogs
           - bmon
           - hping3
+          - nicstat
+          - bridge-utils
           # Image tools
           - squashfs-tools
+          # Storage management
+          - thin-provisioning-tools
           # System tuning
           - irqbalance
           - cpufrequtils

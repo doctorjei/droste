@@ -14,7 +14,7 @@ packer {
 # ── Variables ───────────────────────────────────────────────────────
 variable "base_image" {
   type    = string
-  default = "../../output-droste-yarn/droste-yarn.qcow2"
+  default = "../../output-droste-tapestry/droste-tapestry.qcow2"
 }
 
 variable "disk_size" {
@@ -33,8 +33,8 @@ variable "cpus" {
 }
 
 # ── Source ──────────────────────────────────────────────────────────
-source "qemu" "droste-fabric" {
-  vm_name      = "droste-fabric.qcow2"
+source "qemu" "droste-loom" {
+  vm_name      = "droste-loom.qcow2"
   disk_image   = true
   iso_url      = var.base_image
   iso_checksum = "none"
@@ -76,7 +76,7 @@ source "qemu" "droste-fabric" {
 
   shutdown_command = "sudo shutdown -P now"
 
-  output_directory = "../../output-droste-fabric"
+  output_directory = "../../output-droste-loom"
 
   qemuargs = [
     ["-cpu", "host"],
@@ -85,10 +85,10 @@ source "qemu" "droste-fabric" {
 
 # ── Build ───────────────────────────────────────────────────────────
 build {
-  sources = ["source.qemu.droste-fabric"]
+  sources = ["source.qemu.droste-loom"]
 
   provisioner "ansible" {
-    playbook_file = "../../ansible/droste-fabric.yml"
+    playbook_file = "../../ansible/droste-loom.yml"
     user          = "agent"
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
@@ -99,24 +99,24 @@ build {
     ]
   }
 
-  # Upload and run Phase 3 smoke tests inside the guest before shutdown.
+  # Upload and run Phase 5 smoke tests inside the guest before shutdown.
   provisioner "file" {
-    source      = "../../scripts/smoke-test-guest-fabric.sh"
-    destination = "/tmp/smoke-test-guest-fabric.sh"
+    source      = "../../scripts/smoke-test-guest-loom.sh"
+    destination = "/tmp/smoke-test-guest-loom.sh"
   }
 
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/smoke-test-guest-fabric.sh",
-      "sudo /tmp/smoke-test-guest-fabric.sh",
-      "rm -f /tmp/smoke-test-guest-fabric.sh",
+      "chmod +x /tmp/smoke-test-guest-loom.sh",
+      "sudo /tmp/smoke-test-guest-loom.sh",
+      "rm -f /tmp/smoke-test-guest-loom.sh",
     ]
   }
 
   post-processor "shell-local" {
     inline = [
-      "qemu-img convert -O qcow2 -c ../../output-droste-fabric/droste-fabric.qcow2 ../../output-droste-fabric/droste-fabric-compressed.qcow2",
-      "mv ../../output-droste-fabric/droste-fabric-compressed.qcow2 ../../output-droste-fabric/droste-fabric.qcow2",
+      "qemu-img convert -O qcow2 -c ../../output-droste-loom/droste-loom.qcow2 ../../output-droste-loom/droste-loom-compressed.qcow2",
+      "mv ../../output-droste-loom/droste-loom-compressed.qcow2 ../../output-droste-loom/droste-loom.qcow2",
     ]
   }
 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Smoke test for droste-full — runs inside the guest.
+# Smoke test for droste-yarn — runs inside the guest.
 #
 # Verifies Phase 2 additions only (VM tools, nested virt config).
 # Phase 1 checks are in smoke-test-guest.sh.
 #
 # Usage:
-#   sudo ./smoke-test-guest-full.sh
+#   sudo ./smoke-test-guest-yarn.sh
 set -euo pipefail
 
 # ── Test framework ──────────────────────────────────────────────────
@@ -26,7 +26,7 @@ check() {
     fi
 }
 
-echo "droste-full smoke test (guest)"
+echo "droste-yarn smoke test (guest)"
 echo "==============================="
 echo ""
 

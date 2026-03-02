@@ -2,9 +2,9 @@
 # Ansible playbook for droste-fabric: HA, storage, and cluster layer.
 #
 # Adds Pacemaker/Corosync HA stack, DRBD replicated storage, iSCSI,
-# Ceph client, and cluster tools on top of droste-full.
+# Ceph client, and cluster tools on top of droste-yarn.
 #
-# This playbook runs on top of an already-provisioned droste-full image.
+# This playbook runs on top of an already-provisioned droste-yarn image.
 # It only installs Phase 3 additions — all Phase 1+2 config is inherited.
 #
 # Usage:

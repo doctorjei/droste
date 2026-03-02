@@ -44,7 +44,7 @@ echo ""
 # ── Network scanning ─────────────────────────────────────────────────
 echo "Network scanning:"
 check "nmap available"                "command -v nmap"
-check "arp-scan available"            "command -v arp-scan"
+check "arp-scan available"            "test -x /usr/sbin/arp-scan"
 echo ""
 
 # ── ARM emulation ─────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ echo ""
 
 # ── Load balancing ────────────────────────────────────────────────────
 echo "Load balancing:"
-check "haproxy available"             "command -v haproxy"
+check "haproxy available"             "test -x /usr/sbin/haproxy"
 echo ""
 
 # ── Hardware management ───────────────────────────────────────────────
@@ -74,7 +74,7 @@ echo ""
 echo "Disk/storage tools:"
 check "sg_inq available"              "command -v sg_inq"
 check "smartctl available"            "test -x /usr/sbin/smartctl"
-check "blktrace available"            "command -v blktrace"
+check "blktrace available"            "test -x /usr/sbin/blktrace"
 check "xorriso available"             "command -v xorriso"
 echo ""
 
@@ -104,8 +104,8 @@ echo ""
 # ── Security ──────────────────────────────────────────────────────────
 echo "Security:"
 check "fail2ban-client available"     "command -v fail2ban-client"
-check "lynis available"               "command -v lynis"
-check "aa-enforce available"          "command -v aa-enforce"
+check "lynis available"               "test -x /usr/sbin/lynis"
+check "aa-enforce available"          "test -x /usr/sbin/aa-enforce"
 check "aide available"                "command -v aide"
 check "auditctl available"            "test -x /usr/sbin/auditctl"
 echo ""

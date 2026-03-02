@@ -2,7 +2,7 @@
 # Smoke test for droste-fabric — runs inside the guest.
 #
 # Verifies Phase 3 additions only (HA, storage, cluster).
-# Phase 1 checks are in smoke-test-guest.sh, Phase 2 in smoke-test-guest-full.sh.
+# Phase 1 checks are in smoke-test-guest.sh, Phase 2 in smoke-test-guest-yarn.sh.
 #
 # Usage:
 #   sudo ./smoke-test-guest-fabric.sh

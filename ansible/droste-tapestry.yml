@@ -23,7 +23,7 @@
           - openvswitch-switch
           # Packet analysis
           - tshark
-          # ARM emulation (shares qemu infrastructure from full)
+          # ARM emulation (shares qemu infrastructure from yarn)
           - qemu-system-arm
           # Network scanning
           - nmap

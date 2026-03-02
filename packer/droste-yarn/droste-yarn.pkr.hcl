@@ -33,8 +33,8 @@ variable "cpus" {
 }
 
 # ── Source ──────────────────────────────────────────────────────────
-source "qemu" "droste-full" {
-  vm_name      = "droste-full.qcow2"
+source "qemu" "droste-yarn" {
+  vm_name      = "droste-yarn.qcow2"
   disk_image   = true
   iso_url      = var.base_image
   iso_checksum = "none"
@@ -76,7 +76,7 @@ source "qemu" "droste-full" {
 
   shutdown_command = "sudo shutdown -P now"
 
-  output_directory = "../../output-droste-full"
+  output_directory = "../../output-droste-yarn"
 
   qemuargs = [
     ["-cpu", "host"],
@@ -85,10 +85,10 @@ source "qemu" "droste-full" {
 
 # ── Build ───────────────────────────────────────────────────────────
 build {
-  sources = ["source.qemu.droste-full"]
+  sources = ["source.qemu.droste-yarn"]
 
   provisioner "ansible" {
-    playbook_file = "../../ansible/droste-full.yml"
+    playbook_file = "../../ansible/droste-yarn.yml"
     user          = "agent"
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
@@ -101,22 +101,22 @@ build {
 
   # Upload and run Phase 2 smoke tests inside the guest before shutdown.
   provisioner "file" {
-    source      = "../../scripts/smoke-test-guest-full.sh"
-    destination = "/tmp/smoke-test-guest-full.sh"
+    source      = "../../scripts/smoke-test-guest-yarn.sh"
+    destination = "/tmp/smoke-test-guest-yarn.sh"
   }
 
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/smoke-test-guest-full.sh",
-      "sudo /tmp/smoke-test-guest-full.sh",
-      "rm -f /tmp/smoke-test-guest-full.sh",
+      "chmod +x /tmp/smoke-test-guest-yarn.sh",
+      "sudo /tmp/smoke-test-guest-yarn.sh",
+      "rm -f /tmp/smoke-test-guest-yarn.sh",
     ]
   }
 
   post-processor "shell-local" {
     inline = [
-      "qemu-img convert -O qcow2 -c ../../output-droste-full/droste-full.qcow2 ../../output-droste-full/droste-full-compressed.qcow2",
-      "mv ../../output-droste-full/droste-full-compressed.qcow2 ../../output-droste-full/droste-full.qcow2",
+      "qemu-img convert -O qcow2 -c ../../output-droste-yarn/droste-yarn.qcow2 ../../output-droste-yarn/droste-yarn-compressed.qcow2",
+      "mv ../../output-droste-yarn/droste-yarn-compressed.qcow2 ../../output-droste-yarn/droste-yarn.qcow2",
     ]
   }
 }

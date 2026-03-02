@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Smoke test droste-full additions over SSH.
+# Smoke test droste-yarn additions over SSH.
 #
 # Verifies Phase 2 additions only (VM tools, nested virt config).
 # Phase 1 checks are in smoke-test.sh.
 #
 # Usage:
-#   scripts/smoke-test-full.sh
-#   scripts/smoke-test-full.sh --port 2222 --user agent --host localhost
+#   scripts/smoke-test-yarn.sh
+#   scripts/smoke-test-yarn.sh --port 2222 --user agent --host localhost
 set -euo pipefail
 
 # ── Defaults ────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Smoke test droste-full additions over SSH.
+Smoke test droste-yarn additions over SSH.
 
 Options:
   --host HOST      Guest hostname or IP (default: localhost)
@@ -73,7 +73,7 @@ check() {
 }
 
 # ── Connectivity ────────────────────────────────────────────────────
-echo "droste-full smoke test"
+echo "droste-yarn smoke test"
 echo "======================"
 echo ""
 echo "Target: ${USER}@${HOST}:${PORT}"
@@ -128,7 +128,7 @@ check "mksquashfs available"           "command -v mksquashfs"
 check "irqbalance available"           "test -x /usr/sbin/irqbalance"
 check "cpufreq-info available"         "command -v cpufreq-info"
 check "ethtool available"              "test -x /usr/sbin/ethtool"
-check "nicstat available"              "command -v nicstat"
+check "nicstat available"              "test -x /usr/bin/nicstat"
 check "brctl available"                "test -x /usr/sbin/brctl"
 check "thin_check available"           "test -x /usr/sbin/thin_check"
 check "sysbench available"             "sysbench --version"

@@ -4,8 +4,8 @@
 # Usage:
 #   scripts/build.sh                          # build and test droste-thread
 #   scripts/build.sh thread build             # just build droste-thread
-#   scripts/build.sh full                     # build and test droste-full
-#   scripts/build.sh full test                # boot and smoke test droste-full
+#   scripts/build.sh yarn                     # build and test droste-yarn
+#   scripts/build.sh yarn test                # boot and smoke test droste-yarn
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,9 +20,10 @@ Build and test droste images.
 
 Images:
   thread     Container-ready base image (default)
-  full       VM-capable image (builds on top of thread)
-  fabric     HA/storage/cluster image (builds on top of full)
+  yarn       VM-capable image (builds on top of thread)
+  fabric     HA/storage/cluster image (builds on top of yarn)
   tapestry   Testing/benchmarking/security image (builds on top of fabric)
+  loom       Development/build toolchain image (builds on top of tapestry)
 
 Commands:
   all        Check prereqs, build image, and run smoke tests (default)
@@ -38,9 +39,9 @@ Options (for 'test' command):
 Examples:
   $(basename "$0")                          # build and test thread (default)
   $(basename "$0") thread build             # just build thread
-  $(basename "$0") full                     # prereqs + build + test full
+  $(basename "$0") yarn                     # prereqs + build + test yarn
   $(basename "$0") fabric                   # prereqs + build + test fabric
-  $(basename "$0") full test --ssh-key ~/.ssh/id_ed25519.pub
+  $(basename "$0") yarn test --ssh-key ~/.ssh/id_ed25519.pub
   $(basename "$0") prereqs                  # just check prereqs (backward compat)
 EOF
 }
@@ -66,8 +67,8 @@ do_build_thread() {
     ls -lh "$PROJECT_DIR/output-droste-thread/droste-thread.qcow2"
 }
 
-# ── Build (full) ─────────────────────────────────────────────────────
-do_build_full() {
+# ── Build (yarn) ─────────────────────────────────────────────────────
+do_build_yarn() {
     local base_image="$PROJECT_DIR/output-droste-thread/droste-thread.qcow2"
     if [[ ! -f "$base_image" ]]; then
         echo "droste-thread.qcow2 not found, building thread first..."
@@ -76,28 +77,29 @@ do_build_full() {
         echo ""
     fi
 
-    echo "Building droste-full image (on top of droste-thread)..."    echo ""
+    echo "Building droste-yarn image (on top of droste-thread)..."
+    echo ""
 
-    cd "$PROJECT_DIR/packer/droste-full"
+    cd "$PROJECT_DIR/packer/droste-yarn"
     packer init .
-    packer build -force -var "base_image=$base_image" droste-full.pkr.hcl
+    packer build -force -var "base_image=$base_image" droste-yarn.pkr.hcl
 
     echo ""
     echo "Build complete."
-    ls -lh "$PROJECT_DIR/output-droste-full/droste-full.qcow2"
+    ls -lh "$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2"
 }
 
 # ── Build (fabric) ──────────────────────────────────────────────────
 do_build_fabric() {
-    local base_image="$PROJECT_DIR/output-droste-full/droste-full.qcow2"
+    local base_image="$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2"
     if [[ ! -f "$base_image" ]]; then
-        echo "droste-full.qcow2 not found, building full first..."
+        echo "droste-yarn.qcow2 not found, building yarn first..."
         echo ""
-        do_build_full
+        do_build_yarn
         echo ""
     fi
 
-    echo "Building droste-fabric image (on top of droste-full)..."
+    echo "Building droste-fabric image (on top of droste-yarn)..."
     echo ""
 
     cd "$PROJECT_DIR/packer/droste-fabric"
@@ -129,6 +131,28 @@ do_build_tapestry() {
     echo ""
     echo "Build complete."
     ls -lh "$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2"
+}
+
+# ── Build (loom) ──────────────────────────────────────────────────
+do_build_loom() {
+    local base_image="$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2"
+    if [[ ! -f "$base_image" ]]; then
+        echo "droste-tapestry.qcow2 not found, building tapestry first..."
+        echo ""
+        do_build_tapestry
+        echo ""
+    fi
+
+    echo "Building droste-loom image (on top of droste-tapestry)..."
+    echo ""
+
+    cd "$PROJECT_DIR/packer/droste-loom"
+    packer init .
+    packer build -force -var "base_image=$base_image" droste-loom.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
 }
 
 # ── Test ────────────────────────────────────────────────────────────
@@ -166,9 +190,10 @@ do_test() {
     local image
     case "$image_type" in
         thread)   image="$PROJECT_DIR/output-droste-thread/droste-thread.qcow2" ;;
-        full)     image="$PROJECT_DIR/output-droste-full/droste-full.qcow2" ;;
+        yarn)     image="$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2" ;;
         fabric)   image="$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2" ;;
         tapestry) image="$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2" ;;
+        loom)     image="$PROJECT_DIR/output-droste-loom/droste-loom.qcow2" ;;
     esac
 
     if [[ ! -f "$image" ]]; then
@@ -223,26 +248,34 @@ do_test() {
         --port "$ssh_port" \
         --ssh-key "$private_key"
 
-    # Run Phase 2 smoke tests (full, fabric, and tapestry)
-    if [[ "$image_type" == "full" || "$image_type" == "fabric" || "$image_type" == "tapestry" ]]; then
+    # Run Phase 2 smoke tests (yarn, fabric, tapestry, and loom)
+    if [[ "$image_type" == "yarn" || "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" ]]; then
         echo ""
-        "$SCRIPT_DIR/smoke-test-full.sh" \
+        "$SCRIPT_DIR/smoke-test-yarn.sh" \
             --port "$ssh_port" \
             --ssh-key "$private_key"
     fi
 
-    # Run Phase 3 smoke tests (fabric and tapestry)
-    if [[ "$image_type" == "fabric" || "$image_type" == "tapestry" ]]; then
+    # Run Phase 3 smoke tests (fabric, tapestry, and loom)
+    if [[ "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" ]]; then
         echo ""
         "$SCRIPT_DIR/smoke-test-fabric.sh" \
             --port "$ssh_port" \
             --ssh-key "$private_key"
     fi
 
-    # Run Phase 4 smoke tests (tapestry only)
-    if [[ "$image_type" == "tapestry" ]]; then
+    # Run Phase 4 smoke tests (tapestry and loom)
+    if [[ "$image_type" == "tapestry" || "$image_type" == "loom" ]]; then
         echo ""
         "$SCRIPT_DIR/smoke-test-tapestry.sh" \
+            --port "$ssh_port" \
+            --ssh-key "$private_key"
+    fi
+
+    # Run Phase 5 smoke tests (loom only)
+    if [[ "$image_type" == "loom" ]]; then
+        echo ""
+        "$SCRIPT_DIR/smoke-test-loom.sh" \
             --port "$ssh_port" \
             --ssh-key "$private_key"
     fi
@@ -270,7 +303,7 @@ if [[ $# -gt 0 ]]; then
             COMMAND="$1"
             shift
             ;;
-        thread|full|fabric|tapestry)
+        thread|yarn|fabric|tapestry|loom)
             IMAGE="$1"
             shift
             COMMAND="${1:-all}"
@@ -291,9 +324,10 @@ case "$COMMAND" in
         echo ""
         case "$IMAGE" in
             thread)   do_build_thread ;;
-            full)   do_build_full ;;
+            yarn)   do_build_yarn ;;
             fabric)   do_build_fabric ;;
             tapestry) do_build_tapestry ;;
+            loom)     do_build_loom ;;
         esac
         echo ""
         do_test "$IMAGE" "$@"
@@ -304,9 +338,10 @@ case "$COMMAND" in
     build)
         case "$IMAGE" in
             thread)   do_build_thread ;;
-            full)   do_build_full ;;
+            yarn)   do_build_yarn ;;
             fabric)   do_build_fabric ;;
             tapestry) do_build_tapestry ;;
+            loom)     do_build_loom ;;
         esac
         ;;
     test)
