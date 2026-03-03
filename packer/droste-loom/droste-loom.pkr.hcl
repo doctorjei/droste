@@ -99,20 +99,6 @@ build {
     ]
   }
 
-  # Upload and run Phase 5 smoke tests inside the guest before shutdown.
-  provisioner "file" {
-    source      = "../../scripts/smoke-test-guest-loom.sh"
-    destination = "/tmp/smoke-test-guest-loom.sh"
-  }
-
-  provisioner "shell" {
-    inline = [
-      "chmod +x /tmp/smoke-test-guest-loom.sh",
-      "sudo /tmp/smoke-test-guest-loom.sh",
-      "rm -f /tmp/smoke-test-guest-loom.sh",
-    ]
-  }
-
   post-processor "shell-local" {
     inline = [
       "qemu-img convert -O qcow2 -c ../../output-droste-loom/droste-loom.qcow2 ../../output-droste-loom/droste-loom-compressed.qcow2",

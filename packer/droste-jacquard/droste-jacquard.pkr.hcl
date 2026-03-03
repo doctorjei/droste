@@ -14,7 +14,7 @@ packer {
 # ── Variables ───────────────────────────────────────────────────────
 variable "base_image" {
   type    = string
-  default = "../../output-droste-thread/droste-thread.qcow2"
+  default = "../../output-droste-loom/droste-loom.qcow2"
 }
 
 variable "disk_size" {
@@ -24,7 +24,7 @@ variable "disk_size" {
 
 variable "memory" {
   type    = number
-  default = 2048
+  default = 4096
 }
 
 variable "cpus" {
@@ -33,8 +33,8 @@ variable "cpus" {
 }
 
 # ── Source ──────────────────────────────────────────────────────────
-source "qemu" "droste-yarn" {
-  vm_name      = "droste-yarn.qcow2"
+source "qemu" "droste-jacquard" {
+  vm_name      = "droste-jacquard.qcow2"
   disk_image   = true
   iso_url      = var.base_image
   iso_checksum = "none"
@@ -76,7 +76,7 @@ source "qemu" "droste-yarn" {
 
   shutdown_command = "sudo shutdown -P now"
 
-  output_directory = "../../output-droste-yarn"
+  output_directory = "../../output-droste-jacquard"
 
   qemuargs = [
     ["-cpu", "host"],
@@ -85,14 +85,16 @@ source "qemu" "droste-yarn" {
 
 # ── Build ───────────────────────────────────────────────────────────
 build {
-  sources = ["source.qemu.droste-yarn"]
+  sources = ["source.qemu.droste-jacquard"]
 
   provisioner "ansible" {
-    playbook_file = "../../ansible/droste-yarn.yml"
+    playbook_file = "../../ansible/droste-jacquard.yml"
     user          = "agent"
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
       "ANSIBLE_SCP_EXTRA_ARGS=-O",
+      "ANSIBLE_COW_PATH=${path.root}/../../ansible/files",
+      "ANSIBLE_COW_SELECTION=droste",
     ]
     extra_arguments = [
       "--become",
@@ -101,8 +103,8 @@ build {
 
   post-processor "shell-local" {
     inline = [
-      "qemu-img convert -O qcow2 -c ../../output-droste-yarn/droste-yarn.qcow2 ../../output-droste-yarn/droste-yarn-compressed.qcow2",
-      "mv ../../output-droste-yarn/droste-yarn-compressed.qcow2 ../../output-droste-yarn/droste-yarn.qcow2",
+      "qemu-img convert -O qcow2 -c ../../output-droste-jacquard/droste-jacquard.qcow2 ../../output-droste-jacquard/droste-jacquard-compressed.qcow2",
+      "mv ../../output-droste-jacquard/droste-jacquard-compressed.qcow2 ../../output-droste-jacquard/droste-jacquard.qcow2",
     ]
   }
 }

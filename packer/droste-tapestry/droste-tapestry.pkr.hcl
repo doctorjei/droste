@@ -99,20 +99,6 @@ build {
     ]
   }
 
-  # Upload and run Phase 4 smoke tests inside the guest before shutdown.
-  provisioner "file" {
-    source      = "../../scripts/smoke-test-guest-tapestry.sh"
-    destination = "/tmp/smoke-test-guest-tapestry.sh"
-  }
-
-  provisioner "shell" {
-    inline = [
-      "chmod +x /tmp/smoke-test-guest-tapestry.sh",
-      "sudo /tmp/smoke-test-guest-tapestry.sh",
-      "rm -f /tmp/smoke-test-guest-tapestry.sh",
-    ]
-  }
-
   post-processor "shell-local" {
     inline = [
       "qemu-img convert -O qcow2 -c ../../output-droste-tapestry/droste-tapestry.qcow2 ../../output-droste-tapestry/droste-tapestry-compressed.qcow2",

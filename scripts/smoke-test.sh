@@ -72,6 +72,25 @@ check() {
     fi
 }
 
+# check_any "label" "desc1" "cmd1" "desc2" "cmd2" ...
+# Passes if any alternative succeeds, displays only the one that matched.
+check_any() {
+    local label="$1"
+    shift
+    while [[ $# -ge 2 ]]; do
+        local desc="$1" cmd="$2"
+        shift 2
+        if ssh_run "$cmd" &>/dev/null; then
+            echo "  + $label ($desc)"
+            PASS=$((PASS + 1))
+            return
+        fi
+    done
+    echo "  - FAIL: $label"
+    ERRORS+=("$label")
+    FAIL=$((FAIL + 1))
+}
+
 # ── Connectivity ────────────────────────────────────────────────────
 echo "droste-thread smoke test"
 echo "======================"
@@ -173,7 +192,7 @@ check "socat available"          "socat -V"
 check "fping available"          "fping --version"
 check "arping available"         "command -v arping"
 check "parallel available"       "parallel --version"
-check "watchdog available"       "test -x /usr/sbin/watchdog"
+check_any "watchdog" "standalone" "test -x /usr/sbin/watchdog" "pve-ha" "test -x /usr/sbin/ha-manager"
 check "dnstop available"         "command -v dnstop"
 check "fatrace available"        "test -x /usr/sbin/fatrace"
 check "crudini available"        "crudini --version"

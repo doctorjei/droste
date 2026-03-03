@@ -24,6 +24,7 @@ Images:
   fabric     HA/storage/cluster image (builds on top of yarn)
   tapestry   Testing/benchmarking/security image (builds on top of fabric)
   loom       Development/build toolchain image (builds on top of tapestry)
+  jacquard   Proxmox VE testing environment (builds on top of loom)
 
 Commands:
   all        Check prereqs, build image, and run smoke tests (default)
@@ -155,6 +156,28 @@ do_build_loom() {
     ls -lh "$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
 }
 
+# ── Build (jacquard) ──────────────────────────────────────────────
+do_build_jacquard() {
+    local base_image="$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
+    if [[ ! -f "$base_image" ]]; then
+        echo "droste-loom.qcow2 not found, building loom first..."
+        echo ""
+        do_build_loom
+        echo ""
+    fi
+
+    echo "Building droste-jacquard image (on top of droste-loom)..."
+    echo ""
+
+    cd "$PROJECT_DIR/packer/droste-jacquard"
+    packer init .
+    packer build -force -var "base_image=$base_image" droste-jacquard.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-jacquard/droste-jacquard.qcow2"
+}
+
 # ── Test ────────────────────────────────────────────────────────────
 do_test() {
     local image_type="$1"
@@ -194,6 +217,7 @@ do_test() {
         fabric)   image="$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2" ;;
         tapestry) image="$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2" ;;
         loom)     image="$PROJECT_DIR/output-droste-loom/droste-loom.qcow2" ;;
+        jacquard) image="$PROJECT_DIR/output-droste-jacquard/droste-jacquard.qcow2" ;;
     esac
 
     if [[ ! -f "$image" ]]; then
@@ -248,34 +272,42 @@ do_test() {
         --port "$ssh_port" \
         --ssh-key "$private_key"
 
-    # Run Phase 2 smoke tests (yarn, fabric, tapestry, and loom)
-    if [[ "$image_type" == "yarn" || "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" ]]; then
+    # Run Phase 2 smoke tests (yarn, fabric, tapestry, loom, and jacquard)
+    if [[ "$image_type" == "yarn" || "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
         echo ""
         "$SCRIPT_DIR/smoke-test-yarn.sh" \
             --port "$ssh_port" \
             --ssh-key "$private_key"
     fi
 
-    # Run Phase 3 smoke tests (fabric, tapestry, and loom)
-    if [[ "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" ]]; then
+    # Run Phase 3 smoke tests (fabric, tapestry, loom, and jacquard)
+    if [[ "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
         echo ""
         "$SCRIPT_DIR/smoke-test-fabric.sh" \
             --port "$ssh_port" \
             --ssh-key "$private_key"
     fi
 
-    # Run Phase 4 smoke tests (tapestry and loom)
-    if [[ "$image_type" == "tapestry" || "$image_type" == "loom" ]]; then
+    # Run Phase 4 smoke tests (tapestry, loom, and jacquard)
+    if [[ "$image_type" == "tapestry" || "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
         echo ""
         "$SCRIPT_DIR/smoke-test-tapestry.sh" \
             --port "$ssh_port" \
             --ssh-key "$private_key"
     fi
 
-    # Run Phase 5 smoke tests (loom only)
-    if [[ "$image_type" == "loom" ]]; then
+    # Run Phase 5 smoke tests (loom and jacquard)
+    if [[ "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
         echo ""
         "$SCRIPT_DIR/smoke-test-loom.sh" \
+            --port "$ssh_port" \
+            --ssh-key "$private_key"
+    fi
+
+    # Run Phase 6 smoke tests (jacquard only)
+    if [[ "$image_type" == "jacquard" ]]; then
+        echo ""
+        "$SCRIPT_DIR/smoke-test-jacquard.sh" \
             --port "$ssh_port" \
             --ssh-key "$private_key"
     fi
@@ -303,7 +335,7 @@ if [[ $# -gt 0 ]]; then
             COMMAND="$1"
             shift
             ;;
-        thread|yarn|fabric|tapestry|loom)
+        thread|yarn|fabric|tapestry|loom|jacquard)
             IMAGE="$1"
             shift
             COMMAND="${1:-all}"
@@ -328,6 +360,7 @@ case "$COMMAND" in
             fabric)   do_build_fabric ;;
             tapestry) do_build_tapestry ;;
             loom)     do_build_loom ;;
+            jacquard) do_build_jacquard ;;
         esac
         echo ""
         do_test "$IMAGE" "$@"
@@ -342,6 +375,7 @@ case "$COMMAND" in
             fabric)   do_build_fabric ;;
             tapestry) do_build_tapestry ;;
             loom)     do_build_loom ;;
+            jacquard) do_build_jacquard ;;
         esac
         ;;
     test)

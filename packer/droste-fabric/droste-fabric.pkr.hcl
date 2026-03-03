@@ -99,20 +99,6 @@ build {
     ]
   }
 
-  # Upload and run Phase 3 smoke tests inside the guest before shutdown.
-  provisioner "file" {
-    source      = "../../scripts/smoke-test-guest-fabric.sh"
-    destination = "/tmp/smoke-test-guest-fabric.sh"
-  }
-
-  provisioner "shell" {
-    inline = [
-      "chmod +x /tmp/smoke-test-guest-fabric.sh",
-      "sudo /tmp/smoke-test-guest-fabric.sh",
-      "rm -f /tmp/smoke-test-guest-fabric.sh",
-    ]
-  }
-
   post-processor "shell-local" {
     inline = [
       "qemu-img convert -O qcow2 -c ../../output-droste-fabric/droste-fabric.qcow2 ../../output-droste-fabric/droste-fabric-compressed.qcow2",

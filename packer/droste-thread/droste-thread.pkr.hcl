@@ -109,20 +109,6 @@ build {
     ]
   }
 
-  # Upload and run smoke tests inside the guest before shutdown.
-  provisioner "file" {
-    source      = "../../scripts/smoke-test-guest-thread.sh"
-    destination = "/tmp/smoke-test-guest-thread.sh"
-  }
-
-  provisioner "shell" {
-    inline = [
-      "chmod +x /tmp/smoke-test-guest-thread.sh",
-      "sudo /tmp/smoke-test-guest-thread.sh",
-      "rm -f /tmp/smoke-test-guest-thread.sh",
-    ]
-  }
-
   # Compact the QCOW2 after provisioning. The playbook zeroes free space,
   # so qemu-img convert -c reclaims it effectively.
   post-processor "shell-local" {
