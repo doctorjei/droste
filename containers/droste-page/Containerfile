@@ -11,7 +11,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
       clustershell \
       pcs pacemaker pacemaker-cli-utils resource-agents \
-      keepalived ebtables fence-agents \
+      keepalived ebtables fence-agents-common \
       pxelinux syslinux-common \
     && rm -rf /var/lib/apt/lists/*
 

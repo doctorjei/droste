@@ -15,7 +15,7 @@ rbd available	rbd --version
 ebtables available	test -x /usr/sbin/ebtables
 
 # Fencing
-fence-agents installed	dpkg -s fence-agents >/dev/null 2>&1
+fence-agents-common installed	dpkg -s fence-agents-common >/dev/null 2>&1
 
 # PXE
 pxelinux.0 exists	test -f /usr/lib/PXELINUX/pxelinux.0
