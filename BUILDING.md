@@ -1,11 +1,12 @@
 # Building
 
 ```bash
-scripts/build.sh thread          # build + test thread
-scripts/build.sh yarn build      # build yarn (no test)
-scripts/build.sh fabric test     # test an existing fabric image
-scripts/build.sh all test        # smoke test all tiers
-scripts/build.sh all build       # build all tiers (requires --force if images exist)
+scripts/drostify build thread          # build + test thread
+scripts/drostify build yarn            # build + test yarn
+scripts/drostify test fabric           # test an existing fabric image
+scripts/drostify test all              # smoke test all tiers
+scripts/drostify build all             # build all tiers (requires --force if images exist)
+scripts/drostify all jacquard          # build prerequisites + jacquard
 ```
 
 Requires KVM and Packer. Each tier auto-builds its prerequisites if missing.

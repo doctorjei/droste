@@ -8,11 +8,11 @@ Each tier builds on the previous one, adding tools for progressively more comple
 
 | Tier | Based on | Focus | Size |
 |------|----------|-------|------|
-| **thread** | debian-13-genericcloud | Basic tools, containers, networking | 444 MB |
-| **yarn** | thread | VM management, storage, nested virt | 691 MB |
-| **fabric** | yarn | HA clustering, DRBD, iSCSI, Ceph | 832 MB |
-| **tapestry** | fabric | Testing, benchmarking, security, observability | 1.1 GB |
-| **loom** | tapestry | C/C++ development toolchain | 1.3 GB |
+| **thread** | debian-13-genericcloud | Basic tools, containers, networking | 368 MB |
+| **yarn** | thread | VM management, storage, nested virt | 559 MB |
+| **fabric** | yarn | HA clustering, DRBD, iSCSI, Ceph | 1.1 GB |
+| **tapestry** | fabric | Testing, benchmarking, security, observability | 1.3 GB |
+| **loom** | tapestry | C/C++ development toolchain | 1.5 GB |
 | **jacquard** | loom | Proxmox VE (PVE kernel, ZFS, corosync) | 2.2 GB |
 
 Pick the smallest tier that has what you need. Most container and networking work only needs **thread**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric**.
