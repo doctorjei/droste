@@ -19,7 +19,7 @@ variable "base_image" {
 
 variable "disk_size" {
   type    = string
-  default = "8G"
+  default = "12G"
 }
 
 variable "memory" {
@@ -93,6 +93,7 @@ build {
     user          = "agent"
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
+      "ANSIBLE_DISPLAY_SKIPPED_HOSTS=false",
       "ANSIBLE_SCP_EXTRA_ARGS=-O",
       "COWPATH=${abspath("${path.root}/../../ansible/files")}",
       "ANSIBLE_COW_SELECTION=droste",

@@ -14,67 +14,108 @@
   hosts: all
   become: true
 
+  vars:
+    tapestry_packages:
+      # Virtual networking
+      - openvswitch-switch
+      # ARM emulation (shares qemu infrastructure from yarn)
+      # Network scanning
+      - nmap
+      # Load balancing
+      - haproxy
+      # Hardware management
+      - ipmitool
+      # Storage benchmarking
+      - fio
+      # Stress testing
+      - stress-ng
+      # SCSI utilities (may already be installed as dep)
+      - sg3-utils
+      # Routing daemon
+      - bird2
+      # Disk health
+      - smartmontools
+      # HTTP benchmarking
+      - apache2-utils
+      # Network benchmarking
+      - iperf3
+      # Container image building
+      - buildah
+      # Container image management
+      - skopeo
+      # Metrics export
+      - prometheus-node-exporter
+      # Database client
+      - postgresql-client
+      # Log analysis
+      - lnav
+      # Redis client
+      - redis-tools
+      # Intrusion prevention
+      - fail2ban
+      # Security auditing
+      - lynis
+      # ISO image tools (may already be installed as dep)
+      - xorriso
+      # AppArmor management
+      - apparmor-utils
+      # File integrity
+      - aide
+      # Kernel audit
+      - auditd
+      # Block I/O tracing
+      - blktrace
+      # L2 scanning
+      - arp-scan
+      # Packet replay
+      - tcpreplay
+
   tasks:
     # ── Tapestry packages ──────────────────────────────────────────────
     - name: Install testing, benchmarking, security, and observability packages
       ansible.builtin.apt:
-        name:
-          # Virtual networking
-          - openvswitch-switch
-          # Packet analysis
-          - tshark
-          # ARM emulation (shares qemu infrastructure from yarn)
-          - qemu-system-arm
-          # Network scanning
-          - nmap
-          # Load balancing
-          - haproxy
-          # Hardware management
-          - ipmitool
-          # Storage benchmarking
-          - fio
-          # Stress testing
-          - stress-ng
-          # SCSI utilities (may already be installed as dep)
-          - sg3-utils
-          # Routing daemon
-          - bird2
-          # Disk health
-          - smartmontools
-          # HTTP benchmarking
-          - apache2-utils
-          # Network benchmarking
-          - iperf3
-          # Container image building
-          - buildah
-          # Container image management
-          - skopeo
-          # Metrics export
-          - prometheus-node-exporter
-          # Database client
-          - postgresql-client
-          # Log analysis
-          - lnav
-          # Redis client
-          - redis-tools
-          # Intrusion prevention
-          - fail2ban
-          # Security auditing
-          - lynis
-          # ISO image tools (may already be installed as dep)
-          - xorriso
-          # AppArmor management
-          - apparmor-utils
-          # File integrity
-          - aide
-          # Kernel audit
-          - auditd
-          # Block I/O tracing
-          - blktrace
-          # L2 scanning
-          - arp-scan
-          # Packet replay
-          - tcpreplay
+        name: "{{ tapestry_packages }}"
         state: present
         update_cache: true
         install_recommends: false
+      register: batch_result
+      failed_when: false
+
+    - name: Identify failed packages
+      when: batch_result.failed
+      block:
+        - name: Try each package individually
+          ansible.builtin.apt:
+            name: "{{ item }}"
+            state: present
+            install_recommends: false
+          loop: "{{ tapestry_packages }}"
+          register: individual_results
+          failed_when: false
+
+        - name: Report failed packages
+          ansible.builtin.fail:
+            msg: >-
+              Failed to install:
+              {{ individual_results.results
+                 | selectattr('failed')
+                 | map(attribute='item')
+                 | join(', ') }}
+          when: individual_results.results | selectattr('failed') | list | length > 0
+
+    # ── Large packages (installed individually) ────────────────────────
+    - name: Install tshark
+      ansible.builtin.apt:
+        name: tshark
+        state: present
+        install_recommends: false
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: Install qemu-system-arm
+      ansible.builtin.apt:
+        name: qemu-system-arm
+        state: present
+        install_recommends: false
+      environment:
+        DEBIAN_FRONTEND: noninteractive

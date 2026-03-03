@@ -5,7 +5,7 @@ cloud-localds available	cloud-localds --help
 ansible available	ansible --version
 envsubst available	envsubst --version
 swtpm available	swtpm --version
-OVMF firmware exists	test -f /usr/share/OVMF/OVMF_CODE.fd
+OVMF firmware exists	test -f /usr/share/OVMF/OVMF_CODE_4M.fd
 gdisk available	test -x /usr/sbin/gdisk
 virsh available	virsh --version
 virt-install available	virt-install --version
@@ -33,7 +33,7 @@ bmon available	command -v bmon
 hping3 available	test -x /usr/sbin/hping3
 mksquashfs available	command -v mksquashfs
 irqbalance available	test -x /usr/sbin/irqbalance
-cpufreq-info available	command -v cpufreq-info
+cpupower available	command -v cpupower
 ethtool available	test -x /usr/sbin/ethtool
 nicstat available	test -x /usr/bin/nicstat
 brctl available	test -x /usr/sbin/brctl

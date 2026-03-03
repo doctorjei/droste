@@ -26,6 +26,9 @@ for checkfile in "$@"; do
 
     tier=$(basename "$checkfile" .checks)
 
+    tier_pass=0
+    tier_fail=0
+
     while IFS= read -r line; do
         # Skip empty lines and section headers
         [[ -z "$line" ]] && continue
@@ -39,12 +42,18 @@ for checkfile in "$@"; do
 
         if eval "$cmd" &>/dev/null; then
             PASS=$((PASS + 1))
+            tier_pass=$((tier_pass + 1))
         else
             echo "FAIL [$tier]: $desc"
             ERRORS+=("[$tier] $desc")
             FAIL=$((FAIL + 1))
+            tier_fail=$((tier_fail + 1))
         fi
     done < "$checkfile"
+
+    if [[ $tier_fail -eq 0 ]]; then
+        echo "droste-${tier} guest checks passed. (${tier_pass}/${tier_pass})"
+    fi
 done
 
 if [[ ${FAIL} -gt 0 ]]; then

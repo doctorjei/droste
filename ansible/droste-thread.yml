@@ -11,6 +11,102 @@
   hosts: all
   become: true
 
+  vars:
+    thread_packages:
+      # Containers
+      - lxc
+      - podman
+      - fuse-overlayfs
+      - slirp4netns
+      - uidmap
+      - systemd-container
+      # Networking
+      - iproute2
+      - dnsmasq
+      - nftables
+      - ipcalc
+      - ipvsadm
+      # Utilities
+      - curl
+      - jq
+      - rsync
+      - tmux
+      - smbclient
+      - git
+      - wget
+      - make
+      - file
+      - netcat-openbsd
+      - dnsutils
+      - tree
+      - unzip
+      - zip
+      - pipx
+      - htop
+      - patch
+      - bc
+      - inetutils-telnet
+      - ssh-import-id
+      - molly-guard
+      - debootstrap
+      - sshpass
+      - xmlstarlet
+      - lsof
+      - strace
+      - sysstat
+      - iotop
+      - iftop
+      - psmisc
+      - expect
+      - moreutils
+      - rename
+      - entr
+      - jo
+      - whois
+      - sqlite3
+      - atop
+      - etckeeper
+      - tftpd-hpa
+      # Remote FS
+      - cifs-utils
+      - nfs-common
+      - sshfs
+      # Filesystem
+      - acl
+      - attr
+      # VPN
+      - wireguard-tools
+      # Firewall
+      - conntrack
+      - ipset
+      # Socket Swiss army knife
+      - socat
+      # Ping / ARP
+      - fping
+      - iputils-arping
+      # Parallel execution
+      - parallel
+      # Watchdog
+      - watchdog
+      # DNS/filesystem monitoring
+      - dnstop
+      - fatrace
+      - inotify-tools
+      # INI file editing
+      - crudini
+      # Container /proc fix
+      - lxcfs
+      # Debugging
+      - ltrace
+      # Pipe
+      - pv
+      # Hex tools
+      - bsdextrautils
+      - xxd
+      # System
+      - locales
+      - qemu-guest-agent
+
   tasks:
     # ── Strip documentation ─────────────────────────────────────────
     - name: Configure dpkg to exclude docs
@@ -51,103 +147,34 @@
     # ── Core system packages ────────────────────────────────────────
     - name: Install system packages
       ansible.builtin.apt:
-        name:
-          # Containers
-          - lxc
-          - podman
-          - fuse-overlayfs
-          - slirp4netns
-          - uidmap
-          - systemd-container
-          # Networking
-          - iproute2
-          - dnsmasq
-          - nftables
-          - ipcalc
-          - ipvsadm
-          # Utilities
-          - curl
-          - jq
-          - rsync
-          - tmux
-          - smbclient
-          - git
-          - wget
-          - make
-          - file
-          - netcat-openbsd
-          - dnsutils
-          - tree
-          - unzip
-          - zip
-          - pipx
-          - htop
-          - patch
-          - bc
-          - inetutils-telnet
-          - ssh-import-id
-          - molly-guard
-          - debootstrap
-          - sshpass
-          - xmlstarlet
-          - lsof
-          - strace
-          - sysstat
-          - iotop
-          - iftop
-          - psmisc
-          - expect
-          - moreutils
-          - rename
-          - entr
-          - jo
-          - whois
-          - sqlite3
-          - atop
-          - etckeeper
-          - tftpd-hpa
-          # Remote FS
-          - cifs-utils
-          - nfs-common
-          - sshfs
-          # Filesystem
-          - acl
-          - attr
-          # VPN
-          - wireguard-tools
-          # Firewall
-          - conntrack
-          - ipset
-          # Socket Swiss army knife
-          - socat
-          # Ping / ARP
-          - fping
-          - iputils-arping
-          # Parallel execution
-          - parallel
-          # Watchdog
-          - watchdog
-          # DNS/filesystem monitoring
-          - dnstop
-          - fatrace
-          - inotify-tools
-          # INI file editing
-          - crudini
-          # Container /proc fix
-          - lxcfs
-          # Debugging
-          - ltrace
-          # Pipe
-          - pv
-          # Hex tools
-          - bsdextrautils
-          - xxd
-          # System
-          - locales
-          - qemu-guest-agent
+        name: "{{ thread_packages }}"
         state: present
         update_cache: true
         install_recommends: false
+      register: batch_result
+      failed_when: false
+
+    - name: Identify failed packages
+      when: batch_result.failed
+      block:
+        - name: Try each package individually
+          ansible.builtin.apt:
+            name: "{{ item }}"
+            state: present
+            install_recommends: false
+          loop: "{{ thread_packages }}"
+          register: individual_results
+          failed_when: false
+
+        - name: Report failed packages
+          ansible.builtin.fail:
+            msg: >-
+              Failed to install:
+              {{ individual_results.results
+                 | selectattr('failed')
+                 | map(attribute='item')
+                 | join(', ') }}
+          when: individual_results.results | selectattr('failed') | list | length > 0
 
     # ── Locales ───────────────────────────────────────────────────────
     - name: Generate locales

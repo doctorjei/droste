@@ -14,41 +14,76 @@
   hosts: all
   become: true
 
+  vars:
+    fabric_packages:
+      # DRBD (module built into cloud kernel)
+      - drbd-utils
+      # Pacemaker/HA
+      - pacemaker
+      - pacemaker-cli-utils
+      - pcs
+      - resource-agents
+      - sbd
+      - fence-agents
+      - keepalived
+      # Cluster
+      - dlm-controld
+      # iSCSI
+      - open-iscsi
+      - targetcli-fb
+      # Storage
+      - multipath-tools
+      # Networking
+      - ebtables
+      # PXE
+      - pxelinux
+      - syslinux-common
+      # Cluster tools
+      - clustershell
+      # System
+      - numactl
+
   tasks:
     # ── Fabric packages ───────────────────────────────────────────────
     - name: Install HA, storage, and cluster packages
       ansible.builtin.apt:
-        name:
-          # DRBD (module built into cloud kernel)
-          - drbd-utils
-          # Pacemaker/HA
-          - pacemaker
-          - pacemaker-cli-utils
-          - pcs
-          - resource-agents
-          - sbd
-          - fence-agents
-          - keepalived
-          # Cluster
-          - dlm-controld
-          # iSCSI
-          - open-iscsi
-          - targetcli-fb
-          # Storage
-          - ceph-common
-          - multipath-tools
-          # Networking
-          - ebtables
-          # PXE
-          - pxelinux
-          - syslinux-common
-          # Cluster tools
-          - clustershell
-          # System
-          - numactl
+        name: "{{ fabric_packages }}"
         state: present
         update_cache: true
         install_recommends: false
+      register: batch_result
+      failed_when: false
+
+    - name: Identify failed packages
+      when: batch_result.failed
+      block:
+        - name: Try each package individually
+          ansible.builtin.apt:
+            name: "{{ item }}"
+            state: present
+            install_recommends: false
+          loop: "{{ fabric_packages }}"
+          register: individual_results
+          failed_when: false
+
+        - name: Report failed packages
+          ansible.builtin.fail:
+            msg: >-
+              Failed to install:
+              {{ individual_results.results
+                 | selectattr('failed')
+                 | map(attribute='item')
+                 | join(', ') }}
+          when: individual_results.results | selectattr('failed') | list | length > 0
+
+    # ── Large packages (installed individually) ────────────────────────
+    - name: Install ceph-common
+      ansible.builtin.apt:
+        name: ceph-common
+        state: present
+        install_recommends: false
+      environment:
+        DEBIAN_FRONTEND: noninteractive
 
     # ── Module autoload ───────────────────────────────────────────────
     - name: Add drbd to module autoload

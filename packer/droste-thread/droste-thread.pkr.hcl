@@ -14,12 +14,12 @@ packer {
 # ── Variables ───────────────────────────────────────────────────────
 variable "debian_image_url" {
   type    = string
-  default = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
+  default = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
 }
 
 variable "debian_image_checksum" {
   type    = string
-  default = "none"
+  default = "sha512:6da628d0f44ddcc8641d5ed1c7a1b4841ccf6608810a8f7aae860db51e9975e76b3c230728560337b615f8b610a34a760cf9d18e8ddb55c48608a06724ea0892"
 }
 
 variable "disk_size" {
@@ -102,6 +102,7 @@ build {
     user          = "agent"
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
+      "ANSIBLE_DISPLAY_SKIPPED_HOSTS=false",
       "ANSIBLE_SCP_EXTRA_ARGS=-O",
       "COWPATH=${abspath("${path.root}/../../ansible/files")}",
       "ANSIBLE_COW_SELECTION=droste",

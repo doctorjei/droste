@@ -13,8 +13,11 @@ if [[ $(id -u) -ne 0 ]]; then
     exit 1
 fi
 
-# Clean apt cache
-apt-get autoclean -y
+# Remove orphaned dependencies
+apt-get autoremove -y
+
+# Clean apt cache (all cached .deb files)
+apt-get clean
 
 # Remove apt lists
 rm -rf /var/lib/apt/lists/*

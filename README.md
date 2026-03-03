@@ -1,6 +1,6 @@
 # Droste
 
-Nested virtualization VM images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built as layered QCOW2 images on top of Debian 12 genericcloud.
+Nested virtualization VM images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built as layered QCOW2 images on top of Debian 13 genericcloud.
 
 ## Tiers
 
@@ -8,7 +8,7 @@ Each tier builds on the previous one, adding tools for progressively more comple
 
 | Tier | Based on | Focus | Size |
 |------|----------|-------|------|
-| **thread** | debian-12-genericcloud | Basic tools, containers, networking | 444 MB |
+| **thread** | debian-13-genericcloud | Basic tools, containers, networking | 444 MB |
 | **yarn** | thread | VM management, storage, nested virt | 691 MB |
 | **fabric** | yarn | HA clustering, DRBD, iSCSI, Ceph | 832 MB |
 | **tapestry** | fabric | Testing, benchmarking, security, observability | 1.1 GB |
@@ -20,7 +20,7 @@ Pick the smallest tier that has what you need. Most container and networking wor
 Each image includes an `agent` user (UID 1000) with passwordless sudo and key-only SSH. See [BUILDING.md](BUILDING.md) for build and test instructions.
 
 ## droste-thread: Basic Tools & Container Tools
-*(based on debian-12-genericcloud)*
+*(based on debian-13-genericcloud)*
 
 ### Tools in addition to base image
 
@@ -51,7 +51,7 @@ Each image includes an `agent` user (UID 1000) with passwordless sudo and key-on
 
 **General Utilities**: ```ansible, dmidecode, gettext-base, hdparm, lshw, pciutils, sysbench```
 
-**System Tools**: ```cpufrequtils, irqbalance```
+**System Tools**: ```linux-cpupower, irqbalance```
 
 ## droste-fabric: High Availability & Clustering
 *(based on droste-yarn)*
@@ -64,7 +64,9 @@ Each image includes an `agent` user (UID 1000) with passwordless sudo and key-on
 
 **Storage**: ```ceph-common, drbd-utils, multipath-tools, open-iscsi, targetcli-fb```
 
-**Networking**: ```ebtables, syslinux-common```
+**PXE**: ```pxelinux, syslinux-common```
+
+**Networking**: ```ebtables```
 
 **System Tools**: ```numactl```
 

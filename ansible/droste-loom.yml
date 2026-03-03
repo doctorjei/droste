@@ -14,33 +14,60 @@
   hosts: all
   become: true
 
+  vars:
+    loom_packages:
+      # Compiler toolchain (gcc, g++, make, libc-dev, dpkg-dev)
+      - build-essential
+      # Cross-platform build system generator
+      - cmake
+      # Compile flag helper
+      - pkg-config
+      # Autotools configure script generator
+      - autoconf
+      # Autotools Makefile generator
+      - automake
+      # Generic library support script
+      - libtool
+      # GNU debugger
+      - gdb
+      # Memory error and leak detector
+      - valgrind
+      # Compiler cache
+      - ccache
+      # Small fast build system
+      - ninja-build
+      # Compilation database generator
+      - bear
+
   tasks:
     # ── Loom packages ────────────────────────────────────────────────
     - name: Install C/C++ development and build toolchain packages
       ansible.builtin.apt:
-        name:
-          # Compiler toolchain (gcc-12, g++-12, make, libc-dev, dpkg-dev)
-          - build-essential
-          # Cross-platform build system generator
-          - cmake
-          # Compile flag helper
-          - pkg-config
-          # Autotools configure script generator
-          - autoconf
-          # Autotools Makefile generator
-          - automake
-          # Generic library support script
-          - libtool
-          # GNU debugger
-          - gdb
-          # Memory error and leak detector
-          - valgrind
-          # Compiler cache
-          - ccache
-          # Small fast build system
-          - ninja-build
-          # Compilation database generator
-          - bear
+        name: "{{ loom_packages }}"
         state: present
         update_cache: true
         install_recommends: false
+      register: batch_result
+      failed_when: false
+
+    - name: Identify failed packages
+      when: batch_result.failed
+      block:
+        - name: Try each package individually
+          ansible.builtin.apt:
+            name: "{{ item }}"
+            state: present
+            install_recommends: false
+          loop: "{{ loom_packages }}"
+          register: individual_results
+          failed_when: false
+
+        - name: Report failed packages
+          ansible.builtin.fail:
+            msg: >-
+              Failed to install:
+              {{ individual_results.results
+                 | selectattr('failed')
+                 | map(attribute='item')
+                 | join(', ') }}
+          when: individual_results.results | selectattr('failed') | list | length > 0

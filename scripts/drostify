@@ -1,0 +1,401 @@
+#!/usr/bin/env bash
+# Build, test, and manage droste images.
+#
+# Usage:
+#   scripts/drostify                            # build and test droste-thread
+#   scripts/drostify build thread               # just build droste-thread
+#   scripts/drostify test yarn                  # boot and smoke test droste-yarn
+#   scripts/drostify build all --force          # rebuild all tiers
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+trap 'echo ""; echo "--- drostify finished at $(date "+%Y-%m-%d %H:%M:%S") ---"' EXIT
+
+# ── Usage ───────────────────────────────────────────────────────────
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [COMMAND] [IMAGE] [OPTIONS]
+
+Build and test droste images.
+
+Commands:
+  prereqs    Check build host prerequisites
+  build      Build the image(s) with Packer
+  test       Boot existing image(s) and run smoke tests
+  all        Prereqs + build + test (default)
+  help       Show this help message
+
+Images:
+  thread     Container-ready base image (default)
+  yarn       VM-capable image (builds on top of thread)
+  fabric     HA/storage/cluster image (builds on top of yarn)
+  tapestry   Testing/benchmarking/security image (builds on top of fabric)
+  loom       Development/build toolchain image (builds on top of tapestry)
+  jacquard   Proxmox VE testing environment (builds on top of loom)
+  all        All tiers
+
+Options:
+  --force          Overwrite existing images (required for 'build all')
+  --ssh-key FILE   Path to SSH public key (default: auto-detect)
+  --ssh-port PORT  Host port for SSH (default: 2222)
+
+Examples:
+  $(basename "$0")                          # build and test thread (default)
+  $(basename "$0") build thread             # just build thread
+  $(basename "$0") test yarn                # smoke test yarn
+  $(basename "$0") test all                 # smoke test all tiers
+  $(basename "$0") build all --force        # build all tiers (overwrite)
+  $(basename "$0") test yarn --ssh-key ~/.ssh/id_ed25519.pub
+EOF
+}
+
+# ── Prereqs ─────────────────────────────────────────────────────────
+do_prereqs() {
+    echo "Checking prerequisites..."
+    echo ""
+    "$SCRIPT_DIR/check-prereqs.sh"
+}
+
+# ── Test (uses global SSH_KEY, SSH_PORT) ─────────────────────────────
+do_test() {
+    local image_type="$1"
+
+    local image
+    case "$image_type" in
+        thread)   image="$PROJECT_DIR/output-droste-thread/droste-thread.qcow2" ;;
+        yarn)     image="$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2" ;;
+        fabric)   image="$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2" ;;
+        tapestry) image="$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2" ;;
+        loom)     image="$PROJECT_DIR/output-droste-loom/droste-loom.qcow2" ;;
+        jacquard) image="$PROJECT_DIR/output-droste-jacquard/droste-jacquard.qcow2" ;;
+    esac
+
+    if [[ ! -f "$image" ]]; then
+        echo "Error: image not found at $image" >&2
+        echo "Run '$(basename "$0") build $image_type' first." >&2
+        exit 1
+    fi
+
+    local private_key="${SSH_KEY%.pub}"
+    if [[ ! -f "$private_key" ]]; then
+        echo "Error: private key not found: $private_key" >&2
+        exit 1
+    fi
+
+    echo "Booting image for smoke test..."
+    echo ""
+
+    # Kill any stale QEMU from a previous run
+    local work_dir="${XDG_CACHE_HOME:-$HOME/.cache}/droste-boot"
+    local pidfile="${work_dir}/droste.pid"
+    if [[ -f "$pidfile" ]]; then
+        kill "$(cat "$pidfile")" 2>/dev/null || true
+        rm -f "$pidfile"
+    fi
+    rm -f "${work_dir}/droste-ephemeral.qcow2"
+
+    # Boot in background
+    "$SCRIPT_DIR/boot-droste.sh" \
+        --ssh-key "$SSH_KEY" \
+        --ssh-port "$SSH_PORT" \
+        --image "$image" \
+        --daemonize
+
+    # Wait for SSH to become available
+    echo "Waiting for SSH..."
+    local retries=30
+    while ! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+              -o LogLevel=ERROR -o ConnectTimeout=2 \
+              -p "$SSH_PORT" -i "$private_key" agent@localhost true &>/dev/null; do
+        ((retries--))
+        if [[ $retries -le 0 ]]; then
+            echo "Error: SSH did not become available" >&2
+            exit 1
+        fi
+        sleep 2
+    done
+    echo "SSH is up."
+    echo ""
+
+    # Run smoke tests for this tier
+    "$SCRIPT_DIR/ssh-smoke-test.sh" \
+        --port "$SSH_PORT" \
+        --ssh-key "$private_key" \
+        "$PROJECT_DIR/checks/${image_type}.checks"
+
+    # Clean up — kill QEMU
+    pidfile="${XDG_CACHE_HOME:-$HOME/.cache}/droste-boot/droste.pid"
+    if [[ -f "$pidfile" ]]; then
+        kill "$(cat "$pidfile")" 2>/dev/null || true
+        rm -f "$pidfile"
+    fi
+
+    echo ""
+    echo "Test complete. VM stopped."
+}
+
+# ── Build functions ──────────────────────────────────────────────────
+# Every build function runs SSH tests immediately after building.
+
+do_build_thread() {
+    echo "Building droste-thread image..."
+    echo ""
+
+    cd "$PROJECT_DIR/packer/droste-thread"
+    packer init .
+    packer build -force droste-thread.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-thread/droste-thread.qcow2"
+    echo ""
+    do_test thread
+}
+
+do_build_yarn() {
+    echo "Building droste-yarn image (on top of droste-thread)..."
+    echo ""
+
+    local base_image="$PROJECT_DIR/output-droste-thread/droste-thread.qcow2"
+    cd "$PROJECT_DIR/packer/droste-yarn"
+    packer init .
+    packer build -force -var "base_image=$base_image" droste-yarn.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2"
+    echo ""
+    do_test yarn
+}
+
+do_build_fabric() {
+    echo "Building droste-fabric image (on top of droste-yarn)..."
+    echo ""
+
+    local base_image="$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2"
+    cd "$PROJECT_DIR/packer/droste-fabric"
+    packer init .
+    packer build -force -var "base_image=$base_image" droste-fabric.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2"
+    echo ""
+    do_test fabric
+}
+
+do_build_tapestry() {
+    echo "Building droste-tapestry image (on top of droste-fabric)..."
+    echo ""
+
+    local base_image="$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2"
+    cd "$PROJECT_DIR/packer/droste-tapestry"
+    packer init .
+    packer build -force -var "base_image=$base_image" droste-tapestry.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2"
+    echo ""
+    do_test tapestry
+}
+
+do_build_loom() {
+    echo "Building droste-loom image (on top of droste-tapestry)..."
+    echo ""
+
+    local base_image="$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2"
+    cd "$PROJECT_DIR/packer/droste-loom"
+    packer init .
+    packer build -force -var "base_image=$base_image" droste-loom.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
+    echo ""
+    do_test loom
+}
+
+do_build_jacquard() {
+    echo "Building droste-jacquard image (on top of droste-loom)..."
+    echo ""
+
+    local base_image="$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
+    cd "$PROJECT_DIR/packer/droste-jacquard"
+    packer init .
+    packer build -force -var "base_image=$base_image" droste-jacquard.pkr.hcl
+
+    echo ""
+    echo "Build complete."
+    ls -lh "$PROJECT_DIR/output-droste-jacquard/droste-jacquard.qcow2"
+    ls -lh "$PROJECT_DIR/output-droste-jacquard/droste-jacquard-diff.qcow2"
+    echo ""
+    do_test jacquard
+}
+
+do_build_image() {
+    case "$1" in
+        thread)   do_build_thread ;;
+        yarn)     do_build_yarn ;;
+        fabric)   do_build_fabric ;;
+        tapestry) do_build_tapestry ;;
+        loom)     do_build_loom ;;
+        jacquard) do_build_jacquard ;;
+    esac
+}
+
+# ── Tier order and chain resolution ──────────────────────────────────
+ALL_TIERS=(thread yarn fabric tapestry loom jacquard)
+
+# Return the build chain for a target tier: from the first missing
+# prerequisite through the target. Always includes the target itself.
+resolve_chain() {
+    local target="$1"
+    local chain=()
+    local need_build=false
+    for tier in "${ALL_TIERS[@]}"; do
+        local img="$PROJECT_DIR/output-droste-${tier}/droste-${tier}.qcow2"
+        if [[ ! -f "$img" ]]; then
+            need_build=true
+        fi
+        if [[ "$need_build" == true ]]; then
+            chain+=("$tier")
+        fi
+        [[ "$tier" == "$target" ]] && break
+    done
+    # Always include target (force rebuild)
+    if [[ ${#chain[@]} -eq 0 ]]; then
+        chain=("$target")
+    fi
+    echo "${chain[@]}"
+}
+
+# Return the tiers to process: all 6 for IMAGE=all, or the build
+# chain (with prerequisites) for a single tier.
+resolve_tiers() {
+    if [[ "$IMAGE" == "all" ]]; then
+        echo "${ALL_TIERS[@]}"
+    else
+        resolve_chain "$IMAGE"
+    fi
+}
+
+# ── Parse command and image ──────────────────────────────────────────
+COMMAND="all"
+IMAGE="thread"
+FORCE=false
+SSH_KEY=""
+SSH_PORT=2222
+
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        prereqs|build|test|help|-h|--help)
+            COMMAND="$1"
+            shift
+            ;;
+        thread|yarn|fabric|tapestry|loom|jacquard|all)
+            IMAGE="$1"
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage >&2
+            exit 1
+            ;;
+    esac
+fi
+
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        thread|yarn|fabric|tapestry|loom|jacquard|all)
+            IMAGE="$1"
+            shift
+            ;;
+    esac
+fi
+
+# ── Parse global options ─────────────────────────────────────────────
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force)    FORCE=true; shift ;;
+        --ssh-key)  SSH_KEY="$2"; shift 2 ;;
+        --ssh-port) SSH_PORT="$2"; shift 2 ;;
+        *)          echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+    esac
+done
+
+# Auto-detect SSH key if not provided
+if [[ -z "$SSH_KEY" ]]; then
+    for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
+        if [[ -f "$candidate" ]]; then
+            SSH_KEY="$candidate"
+            break
+        fi
+    done
+    if [[ -z "$SSH_KEY" ]]; then
+        echo "Error: no SSH public key found. Use --ssh-key FILE." >&2
+        exit 1
+    fi
+    echo "Using SSH key: $SSH_KEY"
+fi
+
+# ── Guard: refuse to overwrite existing images without --force ────────
+check_existing_images() {
+    local found=()
+    for tier in $(resolve_tiers); do
+        local dir="$PROJECT_DIR/output-droste-${tier}"
+        for img in "$dir"/*.qcow2; do
+            [[ -f "$img" ]] && found+=("$img")
+        done
+    done
+    if [[ ${#found[@]} -gt 0 ]]; then
+        echo "Error — Image(s) present:" >&2
+        for img in "${found[@]}"; do
+            echo "  $img" >&2
+        done
+        echo "" >&2
+        echo "To overwrite existing images, run: $(basename "$0") $COMMAND $IMAGE --force" >&2
+        exit 1
+    fi
+}
+
+# ── Main ────────────────────────────────────────────────────────────
+case "$COMMAND" in
+    all)
+        do_prereqs
+        if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+            check_existing_images
+        fi
+        for tier in $(resolve_tiers); do
+            echo ""
+            do_build_image "$tier"
+        done
+        ;;
+    prereqs)
+        do_prereqs
+        ;;
+    build)
+        if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+            check_existing_images
+        fi
+        for tier in $(resolve_tiers); do
+            echo ""
+            do_build_image "$tier"
+        done
+        ;;
+    test)
+        for tier in $(resolve_tiers); do
+            do_test "$tier"
+        done
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo "Unknown command: $COMMAND" >&2
+        usage >&2
+        exit 1
+        ;;
+esac

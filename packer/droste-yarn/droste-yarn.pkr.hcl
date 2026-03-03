@@ -92,6 +92,7 @@ build {
     user          = "agent"
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
+      "ANSIBLE_DISPLAY_SKIPPED_HOSTS=false",
       "ANSIBLE_SCP_EXTRA_ARGS=-O",
       "COWPATH=${abspath("${path.root}/../../ansible/files")}",
       "ANSIBLE_COW_SELECTION=droste",
