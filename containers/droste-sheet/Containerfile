@@ -1,0 +1,21 @@
+FROM droste-fiber
+
+LABEL description="droste-sheet: VM tooling layer (yarn equivalent)"
+
+USER root
+
+# ── Install packages ────────────────────────────────────────────
+# Yarn packages relevant to containers (VM stack excluded)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      ansible gettext-base \
+      squashfs-tools cloud-image-utils qemu-utils \
+      dosfstools mtools ntfs-3g \
+      gdisk parted btrfs-progs \
+      cryptsetup mdadm \
+      ncdu \
+      hping3 bmon nethogs nicstat ethtool \
+      lshw sysbench picocom \
+    && rm -rf /var/lib/apt/lists/*
+
+USER agent

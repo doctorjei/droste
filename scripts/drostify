@@ -25,9 +25,10 @@ Commands:
   build      Build the image(s) with Packer
   test       Boot existing image(s) and run smoke tests
   all        Prereqs + build + test (default)
+  container  Build/test container images (podman/docker)
   help       Show this help message
 
-Images:
+Images (VM):
   thread     Container-ready base image (default)
   yarn       VM-capable image (builds on top of thread)
   fabric     HA/storage/cluster image (builds on top of yarn)
@@ -35,6 +36,13 @@ Images:
   loom       Development/build toolchain image (builds on top of tapestry)
   jacquard   Proxmox VE testing environment (builds on top of loom)
   all        All tiers
+
+Images (container):
+  fiber      Container base (thread equivalent)
+  sheet      VM tooling layer (yarn equivalent)
+  page       HA/cluster layer (fabric equivalent)
+  tome       Testing/security layer (tapestry equivalent)
+  gutenberg  Dev toolchain (loom equivalent)
 
 Options:
   --force          Overwrite existing images (required for 'build all')
@@ -48,6 +56,9 @@ Examples:
   $(basename "$0") test all                 # smoke test all tiers
   $(basename "$0") build all --force        # build all tiers (overwrite)
   $(basename "$0") test yarn --ssh-key ~/.ssh/id_ed25519.pub
+  $(basename "$0") container build fiber    # build fiber container
+  $(basename "$0") container test sheet     # test sheet container
+  $(basename "$0") container build all      # build all containers
 EOF
 }
 
@@ -282,6 +293,171 @@ resolve_tiers() {
     fi
 }
 
+# ── Container support ────────────────────────────────────────────────
+ALL_CONTAINER_TIERS=(fiber sheet page tome gutenberg)
+
+detect_container_cmd() {
+    if command -v podman &>/dev/null; then
+        echo podman
+    elif command -v docker &>/dev/null; then
+        echo docker
+    else
+        echo "Error: neither podman nor docker found" >&2
+        exit 1
+    fi
+}
+
+do_test_container() {
+    local tier="$1"
+    local image="droste-${tier}"
+    local checkfile="$PROJECT_DIR/checks/${tier}.checks"
+    local container_cmd
+    container_cmd=$(detect_container_cmd)
+
+    if [[ ! -f "$checkfile" ]]; then
+        echo "Warning: no check file found: $checkfile" >&2
+        return 0
+    fi
+
+    echo "droste-${tier} container test"
+    echo "======================"
+    echo ""
+
+    local cname="droste-test-${tier}"
+    $container_cmd rm -f "$cname" &>/dev/null || true
+    $container_cmd run -d --name "$cname" "$image" sleep infinity >/dev/null
+
+    local pass=0 fail=0 errors=()
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        if [[ "$line" =~ ^#\  ]]; then
+            echo "${line#\# }:"
+            continue
+        fi
+        IFS=$'\t' read -r desc cmd flag <<< "$line"
+        if $container_cmd exec "$cname" bash -c "$cmd" &>/dev/null; then
+            echo "  + $desc"
+            pass=$((pass + 1))
+        else
+            echo "  - FAIL: $desc"
+            errors+=("$desc")
+            fail=$((fail + 1))
+        fi
+    done < "$checkfile"
+
+    $container_cmd rm -f "$cname" >/dev/null
+
+    echo ""
+    echo "================================"
+    echo "Results: ${pass} passed, ${fail} failed"
+
+    if [[ ${fail} -gt 0 ]]; then
+        echo ""
+        echo "Failures:"
+        for err in "${errors[@]}"; do
+            echo "  - $err"
+        done
+        return 1
+    fi
+}
+
+do_build_container() {
+    local tier="$1"
+    local container_cmd
+    container_cmd=$(detect_container_cmd)
+
+    echo "Building droste-${tier} container..."
+    echo ""
+
+    $container_cmd build \
+        -t "droste-${tier}" \
+        -f "$PROJECT_DIR/containers/droste-${tier}/Containerfile" \
+        "$PROJECT_DIR"
+
+    echo ""
+    echo "Build complete."
+    $container_cmd image inspect "droste-${tier}" --format '{{.Size}}' | \
+        awk '{printf "Image size: %.0f MB\n", $1/1024/1024}'
+    echo ""
+    do_test_container "$tier"
+}
+
+resolve_container_chain() {
+    local target="$1"
+    local container_cmd
+    container_cmd=$(detect_container_cmd)
+    local chain=()
+    local need_build=false
+    for tier in "${ALL_CONTAINER_TIERS[@]}"; do
+        if ! $container_cmd image exists "droste-${tier}" 2>/dev/null; then
+            need_build=true
+        fi
+        if [[ "$need_build" == true ]]; then
+            chain+=("$tier")
+        fi
+        [[ "$tier" == "$target" ]] && break
+    done
+    if [[ ${#chain[@]} -eq 0 ]]; then
+        chain=("$target")
+    fi
+    echo "${chain[@]}"
+}
+
+resolve_container_tiers() {
+    local target="$1"
+    if [[ "$target" == "all" ]]; then
+        echo "${ALL_CONTAINER_TIERS[@]}"
+    else
+        resolve_container_chain "$target"
+    fi
+}
+
+# ── Container command handler (self-contained, no SSH needed) ────────
+do_container_command() {
+    local sub_cmd="all"
+    local container_image="all"
+    local force=false
+
+    # Parse: container [build|test|all] [tier] [--force]
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            build|test|all) sub_cmd="$1"; shift ;;
+            fiber|sheet|page|tome|gutenberg) container_image="$1"; shift ;;
+        esac
+    fi
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            fiber|sheet|page|tome|gutenberg|all) container_image="$1"; shift ;;
+        esac
+    fi
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force) force=true; shift ;;
+            *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+        esac
+    done
+
+    local container_cmd
+    container_cmd=$(detect_container_cmd)
+    echo "Using container engine: $container_cmd"
+
+    case "$sub_cmd" in
+        build|all)
+            for tier in $(resolve_container_tiers "$container_image"); do
+                echo ""
+                do_build_container "$tier"
+            done
+            ;;
+        test)
+            for tier in $(resolve_container_tiers "$container_image"); do
+                echo ""
+                do_test_container "$tier"
+            done
+            ;;
+    esac
+}
+
 # ── Parse command and image ──────────────────────────────────────────
 COMMAND="all"
 IMAGE="thread"
@@ -291,6 +467,11 @@ SSH_PORT=2222
 
 if [[ $# -gt 0 ]]; then
     case "$1" in
+        container)
+            shift
+            do_container_command "$@"
+            exit 0
+            ;;
         prereqs|build|test|help|-h|--help)
             COMMAND="$1"
             shift

@@ -1,0 +1,103 @@
+FROM debian:trixie-slim
+
+LABEL maintainer="droste" \
+      description="droste-fiber: container-ready base (thread equivalent)"
+
+# ── Strip documentation ──────────────────────────────────────────
+RUN printf '%s\n' \
+      'path-exclude /usr/share/doc/*' \
+      'path-exclude /usr/share/man/*' \
+      'path-exclude /usr/share/info/*' \
+      'path-exclude /usr/share/locale/*' \
+      'path-include /usr/share/locale/en*' \
+      'path-include /usr/share/locale/zh*' \
+      'path-include /usr/share/locale/hi*' \
+      'path-include /usr/share/locale/es*' \
+      'path-include /usr/share/locale/ar*' \
+      'path-include /usr/share/locale/fr*' \
+      'path-include /usr/share/locale/bn*' \
+      'path-include /usr/share/locale/pt*' \
+      'path-include /usr/share/locale/id*' \
+      'path-include /usr/share/locale/ur*' \
+      'path-include /usr/share/locale/de*' \
+      'path-include /usr/share/locale/ja*' \
+      'path-include /usr/share/locale/ko*' \
+      > /etc/dpkg/dpkg.cfg.d/01-nodoc \
+    && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+
+# ── Install packages ────────────────────────────────────────────
+# Thread packages minus: ipvsadm, watchdog, fatrace, qemu-guest-agent,
+#   lxcfs, molly-guard, cifs-utils, nfs-common
+# Swap: cifs-utils -> smbnetfs
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      # Containers
+      lxc podman fuse-overlayfs slirp4netns uidmap systemd-container \
+      # Networking
+      iproute2 dnsmasq nftables ipcalc \
+      # Utilities
+      sudo curl jq rsync tmux smbclient git wget make file \
+      netcat-openbsd dnsutils tree unzip zip pipx htop patch bc \
+      inetutils-telnet ssh-import-id debootstrap sshpass xmlstarlet \
+      lsof strace sysstat iotop iftop psmisc expect moreutils \
+      rename entr jo whois sqlite3 atop etckeeper tftpd-hpa \
+      # Remote FS (smbnetfs replaces cifs-utils; nfs-common excluded)
+      smbnetfs sshfs \
+      # Filesystem
+      acl attr \
+      # VPN
+      wireguard-tools \
+      # Firewall
+      conntrack ipset \
+      # Socket / ping / ARP
+      socat fping iputils-arping \
+      # Parallel execution
+      parallel \
+      # DNS / filesystem monitoring (fatrace excluded)
+      dnstop inotify-tools \
+      # INI editing
+      crudini \
+      # Debugging
+      ltrace \
+      # Pipe viewer
+      pv \
+      # Hex tools
+      bsdextrautils xxd \
+      # System
+      locales \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Locales ──────────────────────────────────────────────────────
+RUN sed -i '/^# .*UTF-8/{ \
+      /en_US\|zh_CN\|zh_TW\|hi_IN\|es_ES\|ar_SA\|fr_FR\|bn_IN\|pt_BR\|pt_PT\|id_ID\|ur_PK\|de_DE\|ja_JP\|ko_KR/s/^# // \
+    }' /etc/locale.gen \
+    && locale-gen
+
+# ── Python micro-tools ──────────────────────────────────────────
+COPY ansible/files/pystrings /usr/local/bin/pystrings
+COPY ansible/files/pyhttpd  /usr/local/bin/pyhttpd
+RUN chmod 755 /usr/local/bin/pystrings /usr/local/bin/pyhttpd \
+    && update-alternatives --install /usr/bin/strings strings /usr/local/bin/pystrings 10 \
+    && update-alternatives --install /usr/bin/httpd httpd /usr/local/bin/pyhttpd 10
+
+# ── Agent user ───────────────────────────────────────────────────
+RUN groupadd -g 1000 agent \
+    && useradd -u 1000 -g agent -m -s /bin/bash agent \
+    && printf 'agent ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/agent \
+    && chmod 0440 /etc/sudoers.d/agent
+
+# ── Rootless Podman ──────────────────────────────────────────────
+RUN printf 'agent:100000:65536\n' >> /etc/subuid \
+    && printf 'agent:100000:65536\n' >> /etc/subgid \
+    && mkdir -p /home/agent/.config/containers \
+    && printf '[storage]\ndriver = "overlay"\n\n[storage.options.overlay]\nmount_program = "/usr/bin/fuse-overlayfs"\n' \
+       > /home/agent/.config/containers/storage.conf \
+    && chown -R agent:agent /home/agent/.config
+
+# ── Sysctl (written but not applied — container kernel is shared) ─
+RUN printf 'net.ipv4.ip_forward = 1\nnet.ipv6.conf.all.forwarding = 1\n' \
+      > /etc/sysctl.d/99-droste.conf
+
+USER agent
+WORKDIR /home/agent
+CMD ["/bin/bash"]

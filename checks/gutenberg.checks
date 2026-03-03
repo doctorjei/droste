@@ -1,0 +1,20 @@
+# Compilers
+gcc available	command -v gcc
+g++ available	command -v g++
+make available	command -v make
+
+# Build systems
+cmake available	command -v cmake
+autoconf available	command -v autoconf
+automake available	command -v automake
+pkg-config available	command -v pkg-config
+ninja available	command -v ninja
+
+# Debugging
+gdb available	command -v gdb
+valgrind available	command -v valgrind
+
+# Utilities
+ccache available	command -v ccache
+bear available	command -v bear
+libtoolize available	command -v libtoolize

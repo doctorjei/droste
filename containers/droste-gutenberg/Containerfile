@@ -1,0 +1,17 @@
+FROM droste-tome
+
+LABEL description="droste-gutenberg: C/C++ development toolchain (loom equivalent)"
+
+USER root
+
+# ── Install packages ────────────────────────────────────────────
+# All loom packages included (no exclusions)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      build-essential cmake pkg-config \
+      autoconf automake libtool \
+      gdb valgrind \
+      ccache ninja-build bear \
+    && rm -rf /var/lib/apt/lists/*
+
+USER agent
