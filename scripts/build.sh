@@ -11,6 +11,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+trap 'echo ""; echo "--- build.sh finished at $(date "+%Y-%m-%d %H:%M:%S") ---"' EXIT
+
 # ── Usage ───────────────────────────────────────────────────────────
 usage() {
     cat <<EOF
@@ -25,15 +27,17 @@ Images:
   tapestry   Testing/benchmarking/security image (builds on top of fabric)
   loom       Development/build toolchain image (builds on top of tapestry)
   jacquard   Proxmox VE testing environment (builds on top of loom)
+  all        All tiers
 
 Commands:
-  all        Check prereqs, build image, and run smoke tests (default)
   prereqs    Check build host prerequisites
-  build      Build the image with Packer
-  test       Boot an existing image and run smoke tests
+  build      Build the image(s) with Packer
+  test       Boot existing image(s) and run smoke tests
+  all        Prereqs + build + test (default)
   help       Show this help message
 
-Options (for 'test' command):
+Options:
+  --force          Overwrite existing images (required for 'all build')
   --ssh-key FILE   Path to SSH public key (default: auto-detect)
   --ssh-port PORT  Host port for SSH (default: 2222)
 
@@ -41,9 +45,9 @@ Examples:
   $(basename "$0")                          # build and test thread (default)
   $(basename "$0") thread build             # just build thread
   $(basename "$0") yarn                     # prereqs + build + test yarn
-  $(basename "$0") fabric                   # prereqs + build + test fabric
+  $(basename "$0") all test                 # smoke test all tiers
+  $(basename "$0") all build                # build all tiers
   $(basename "$0") yarn test --ssh-key ~/.ssh/id_ed25519.pub
-  $(basename "$0") prereqs                  # just check prereqs (backward compat)
 EOF
 }
 
@@ -176,6 +180,7 @@ do_build_jacquard() {
     echo ""
     echo "Build complete."
     ls -lh "$PROJECT_DIR/output-droste-jacquard/droste-jacquard.qcow2"
+    ls -lh "$PROJECT_DIR/output-droste-jacquard/droste-jacquard-diff.qcow2"
 }
 
 # ── Test ────────────────────────────────────────────────────────────
@@ -267,50 +272,11 @@ do_test() {
     echo "SSH is up."
     echo ""
 
-    # Run Phase 1 smoke tests (always)
-    "$SCRIPT_DIR/smoke-test.sh" \
+    # Run smoke tests for this tier
+    "$SCRIPT_DIR/ssh-smoke-test.sh" \
         --port "$ssh_port" \
-        --ssh-key "$private_key"
-
-    # Run Phase 2 smoke tests (yarn, fabric, tapestry, loom, and jacquard)
-    if [[ "$image_type" == "yarn" || "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
-        echo ""
-        "$SCRIPT_DIR/smoke-test-yarn.sh" \
-            --port "$ssh_port" \
-            --ssh-key "$private_key"
-    fi
-
-    # Run Phase 3 smoke tests (fabric, tapestry, loom, and jacquard)
-    if [[ "$image_type" == "fabric" || "$image_type" == "tapestry" || "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
-        echo ""
-        "$SCRIPT_DIR/smoke-test-fabric.sh" \
-            --port "$ssh_port" \
-            --ssh-key "$private_key"
-    fi
-
-    # Run Phase 4 smoke tests (tapestry, loom, and jacquard)
-    if [[ "$image_type" == "tapestry" || "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
-        echo ""
-        "$SCRIPT_DIR/smoke-test-tapestry.sh" \
-            --port "$ssh_port" \
-            --ssh-key "$private_key"
-    fi
-
-    # Run Phase 5 smoke tests (loom and jacquard)
-    if [[ "$image_type" == "loom" || "$image_type" == "jacquard" ]]; then
-        echo ""
-        "$SCRIPT_DIR/smoke-test-loom.sh" \
-            --port "$ssh_port" \
-            --ssh-key "$private_key"
-    fi
-
-    # Run Phase 6 smoke tests (jacquard only)
-    if [[ "$image_type" == "jacquard" ]]; then
-        echo ""
-        "$SCRIPT_DIR/smoke-test-jacquard.sh" \
-            --port "$ssh_port" \
-            --ssh-key "$private_key"
-    fi
+        --ssh-key "$private_key" \
+        "$PROJECT_DIR/checks/${image_type}.checks"
 
     # Clean up — kill QEMU
     local pidfile="${XDG_CACHE_HOME:-$HOME/.cache}/droste-boot/droste.pid"
@@ -323,19 +289,21 @@ do_test() {
     echo "Test complete. VM stopped."
 }
 
+# ── Tier order ────────────────────────────────────────────────────────
+ALL_TIERS=(thread yarn fabric tapestry loom jacquard)
+
 # ── Parse image and command ──────────────────────────────────────────
-# First arg is checked against known commands. If it matches, IMAGE
-# defaults to "thread". Otherwise it's treated as an IMAGE name.
 IMAGE="thread"
 COMMAND="all"
+FORCE=false
 
 if [[ $# -gt 0 ]]; then
     case "$1" in
-        all|prereqs|build|test|help|-h|--help)
+        prereqs|build|test|help|-h|--help)
             COMMAND="$1"
             shift
             ;;
-        thread|yarn|fabric|tapestry|loom|jacquard)
+        thread|yarn|fabric|tapestry|loom|jacquard|all)
             IMAGE="$1"
             shift
             COMMAND="${1:-all}"
@@ -349,37 +317,87 @@ if [[ $# -gt 0 ]]; then
     esac
 fi
 
+# ── Parse global options ─────────────────────────────────────────────
+REMAINING=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force) FORCE=true; shift ;;
+        *)       REMAINING+=("$1"); shift ;;
+    esac
+done
+set -- ${REMAINING+"${REMAINING[@]}"}
+
+# ── Guard: refuse to overwrite existing images without --force ────────
+check_existing_images() {
+    local found=()
+    for tier in $(resolve_tiers); do
+        local dir="$PROJECT_DIR/output-droste-${tier}"
+        for img in "$dir"/*.qcow2; do
+            [[ -f "$img" ]] && found+=("$img")
+        done
+    done
+    if [[ ${#found[@]} -gt 0 ]]; then
+        echo "Error — Image(s) present:" >&2
+        for img in "${found[@]}"; do
+            echo "  $img" >&2
+        done
+        echo "" >&2
+        echo "To overwrite existing images, run: $(basename "$0") $IMAGE $COMMAND --force" >&2
+        exit 1
+    fi
+}
+
+# ── Helpers for "all" image target ────────────────────────────────────
+do_build_image() {
+    case "$1" in
+        thread)   do_build_thread ;;
+        yarn)     do_build_yarn ;;
+        fabric)   do_build_fabric ;;
+        tapestry) do_build_tapestry ;;
+        loom)     do_build_loom ;;
+        jacquard) do_build_jacquard ;;
+    esac
+}
+
+resolve_tiers() {
+    if [[ "$IMAGE" == "all" ]]; then
+        echo "${ALL_TIERS[@]}"
+    else
+        echo "$IMAGE"
+    fi
+}
+
 # ── Main ────────────────────────────────────────────────────────────
 case "$COMMAND" in
     all)
         do_prereqs
-        echo ""
-        case "$IMAGE" in
-            thread)   do_build_thread ;;
-            yarn)   do_build_yarn ;;
-            fabric)   do_build_fabric ;;
-            tapestry) do_build_tapestry ;;
-            loom)     do_build_loom ;;
-            jacquard) do_build_jacquard ;;
-        esac
-        echo ""
-        do_test "$IMAGE" "$@"
+        if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+            check_existing_images
+        fi
+        for tier in $(resolve_tiers); do
+            echo ""
+            do_build_image "$tier"
+        done
+        for tier in $(resolve_tiers); do
+            echo ""
+            do_test "$tier" "$@"
+        done
         ;;
     prereqs)
         do_prereqs
         ;;
     build)
-        case "$IMAGE" in
-            thread)   do_build_thread ;;
-            yarn)   do_build_yarn ;;
-            fabric)   do_build_fabric ;;
-            tapestry) do_build_tapestry ;;
-            loom)     do_build_loom ;;
-            jacquard) do_build_jacquard ;;
-        esac
+        if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+            check_existing_images
+        fi
+        for tier in $(resolve_tiers); do
+            do_build_image "$tier"
+        done
         ;;
     test)
-        do_test "$IMAGE" "$@"
+        for tier in $(resolve_tiers); do
+            do_test "$tier" "$@"
+        done
         ;;
     help|-h|--help)
         usage

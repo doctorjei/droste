@@ -103,14 +103,28 @@ build {
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
       "ANSIBLE_SCP_EXTRA_ARGS=-O",
+      "COWPATH=${abspath("${path.root}/../../ansible/files")}",
+      "ANSIBLE_COW_SELECTION=droste",
+      "ANSIBLE_COW_ACCEPTLIST=droste",
+      "PERL_UNICODE=SDA",
     ]
     extra_arguments = [
       "--become",
     ]
   }
 
-  # Compact the QCOW2 after provisioning. The playbook zeroes free space,
-  # so qemu-img convert -c reclaims it effectively.
+  # ── Cleanup ──────────────────────────────────────────────────────
+  provisioner "file" {
+    source      = "../../scripts/cleanup-image.sh"
+    destination = "/tmp/cleanup-image.sh"
+  }
+
+  provisioner "shell" {
+    inline = ["sudo bash /tmp/cleanup-image.sh"]
+  }
+
+  # Compact the QCOW2 after provisioning. The cleanup script zeroes free
+  # space, so qemu-img convert -c reclaims it effectively.
   post-processor "shell-local" {
     inline = [
       "qemu-img convert -O qcow2 -c ../../output-droste-thread/droste-thread.qcow2 ../../output-droste-thread/droste-thread-compressed.qcow2",

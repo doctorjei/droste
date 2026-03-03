@@ -35,11 +35,12 @@ variable "cpus" {
 # ── Source ──────────────────────────────────────────────────────────
 source "qemu" "droste-jacquard" {
   vm_name      = "droste-jacquard.qcow2"
-  disk_image   = true
-  iso_url      = var.base_image
-  iso_checksum = "none"
-  disk_size    = var.disk_size
-  format       = "qcow2"
+  disk_image       = true
+  use_backing_file = true
+  iso_url          = var.base_image
+  iso_checksum     = "none"
+  disk_size        = var.disk_size
+  format           = "qcow2"
 
   accelerator  = "kvm"
   cpus         = var.cpus
@@ -93,18 +94,54 @@ build {
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
       "ANSIBLE_SCP_EXTRA_ARGS=-O",
-      "ANSIBLE_COW_PATH=${path.root}/../../ansible/files",
+      "COWPATH=${abspath("${path.root}/../../ansible/files")}",
       "ANSIBLE_COW_SELECTION=droste",
+      "ANSIBLE_COW_ACCEPTLIST=droste",
+      "PYTHONIOENCODING=utf-8",
+      "LC_ALL=C.UTF-8",
+      "PERL_UNICODE=SDA",
     ]
     extra_arguments = [
       "--become",
     ]
   }
 
+  # ── Guest regression test (previous tiers) ──────────────────────
+  provisioner "file" {
+    source      = "../../checks"
+    destination = "/tmp"
+  }
+
+  provisioner "file" {
+    source      = "../../scripts/guest-regression-test.sh"
+    destination = "/tmp/guest-regression-test.sh"
+  }
+
+  provisioner "shell" {
+    inline = ["sudo bash /tmp/guest-regression-test.sh /tmp/checks/thread.checks /tmp/checks/yarn.checks /tmp/checks/fabric.checks /tmp/checks/tapestry.checks /tmp/checks/loom.checks"]
+  }
+
+  # ── Cleanup ──────────────────────────────────────────────────────
+  provisioner "file" {
+    source      = "../../scripts/cleanup-image.sh"
+    destination = "/tmp/cleanup-image.sh"
+  }
+
+  provisioner "shell" {
+    inline = ["sudo bash /tmp/cleanup-image.sh"]
+  }
+
+  # use_backing_file produces an overlay on loom (only changed blocks).
+  # Produce both a standalone image and a portable diff.
   post-processor "shell-local" {
     inline = [
-      "qemu-img convert -O qcow2 -c ../../output-droste-jacquard/droste-jacquard.qcow2 ../../output-droste-jacquard/droste-jacquard-compressed.qcow2",
-      "mv ../../output-droste-jacquard/droste-jacquard-compressed.qcow2 ../../output-droste-jacquard/droste-jacquard.qcow2",
+      # Diff image: create with real backing path, then rebase to bare filename for portability
+      "qemu-img convert -O qcow2 -c -B ../output-droste-loom/droste-loom.qcow2 -F qcow2 ../../output-droste-jacquard/droste-jacquard.qcow2 ../../output-droste-jacquard/droste-jacquard-diff.qcow2",
+      "qemu-img rebase -u -b droste-loom.qcow2 -F qcow2 ../../output-droste-jacquard/droste-jacquard-diff.qcow2",
+      # Standalone image: flatten overlay into self-contained image
+      "qemu-img convert -O qcow2 -c ../../output-droste-jacquard/droste-jacquard.qcow2 ../../output-droste-jacquard/droste-jacquard-standalone.qcow2",
+      # Replace raw overlay with standalone
+      "mv ../../output-droste-jacquard/droste-jacquard-standalone.qcow2 ../../output-droste-jacquard/droste-jacquard.qcow2",
     ]
   }
 }

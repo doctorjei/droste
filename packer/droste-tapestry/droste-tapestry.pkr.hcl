@@ -93,10 +93,39 @@ build {
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
       "ANSIBLE_SCP_EXTRA_ARGS=-O",
+      "COWPATH=${abspath("${path.root}/../../ansible/files")}",
+      "ANSIBLE_COW_SELECTION=droste",
+      "ANSIBLE_COW_ACCEPTLIST=droste",
+      "PERL_UNICODE=SDA",
     ]
     extra_arguments = [
       "--become",
     ]
+  }
+
+  # ── Guest regression test (previous tiers) ──────────────────────
+  provisioner "file" {
+    source      = "../../checks"
+    destination = "/tmp"
+  }
+
+  provisioner "file" {
+    source      = "../../scripts/guest-regression-test.sh"
+    destination = "/tmp/guest-regression-test.sh"
+  }
+
+  provisioner "shell" {
+    inline = ["sudo bash /tmp/guest-regression-test.sh /tmp/checks/thread.checks /tmp/checks/yarn.checks /tmp/checks/fabric.checks"]
+  }
+
+  # ── Cleanup ──────────────────────────────────────────────────────
+  provisioner "file" {
+    source      = "../../scripts/cleanup-image.sh"
+    destination = "/tmp/cleanup-image.sh"
+  }
+
+  provisioner "shell" {
+    inline = ["sudo bash /tmp/cleanup-image.sh"]
   }
 
   post-processor "shell-local" {

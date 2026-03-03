@@ -1,0 +1,23 @@
+# Kernel
+PVE kernel running	uname -r | grep pve
+Debian stock kernel removed	! dpkg -l linux-image-amd64 2>/dev/null | grep -q ^ii
+
+# PVE CLI tools
+pveversion available	command -v pveversion
+pvesh available	command -v pvesh
+qm available	test -x /usr/sbin/qm
+pct available	test -x /usr/sbin/pct
+pvecm available	command -v pvecm
+pvesm available	test -x /usr/sbin/pvesm
+
+# PVE daemons
+pveproxy installed	test -x /usr/bin/pveproxy
+pvedaemon installed	test -x /usr/bin/pvedaemon
+
+# ZFS
+zpool available	command -v zpool || test -x /usr/sbin/zpool
+zfs available	command -v zfs || test -x /usr/sbin/zfs
+
+# Cluster
+corosync available	test -x /usr/sbin/corosync
+ha-manager available	test -x /usr/sbin/ha-manager

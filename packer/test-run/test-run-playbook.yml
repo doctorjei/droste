@@ -1,0 +1,9 @@
+---
+- name: Droste cow test
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: UTF-8 test
+      ansible.builtin.debug:
+        msg: "'══════' ← UTF-8 test line (should be double-line, similar to '======')"
