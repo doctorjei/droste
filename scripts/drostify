@@ -40,18 +40,18 @@ Images (VM):
   all        All tiers
 
 Images (container):
-  fiber      Container base (thread equivalent)
-  sheet      VM tooling layer (yarn equivalent)
-  page       HA/cluster layer (fabric equivalent)
-  tome       Testing/security layer (tapestry equivalent)
-  gutenberg  Dev toolchain (loom equivalent)
-
-Images (LXC):
-  hair       LXC base (thread equivalent)
+  hair       Container base (thread equivalent)
   wool       VM tooling layer (yarn equivalent)
   felt       HA/cluster layer (fabric equivalent)
   amimono    Testing/security layer (tapestry equivalent)
   embellisher Dev toolchain (loom equivalent)
+
+Images (LXC):
+  fiber      LXC base (thread equivalent)
+  sheet      VM tooling layer (yarn equivalent)
+  page       HA/cluster layer (fabric equivalent)
+  tome       Testing/security layer (tapestry equivalent)
+  gutenberg  Dev toolchain (loom equivalent)
 
 Bare tier names are auto-detected — no overlap between VM, container, and LXC names.
 
@@ -67,16 +67,16 @@ Examples:
   $(basename "$0") test all                 # smoke test all tiers
   $(basename "$0") build all --force        # build all tiers (overwrite)
   $(basename "$0") test yarn --ssh-key ~/.ssh/id_ed25519.pub
-  $(basename "$0") build fiber              # build fiber container (auto-detected)
-  $(basename "$0") test sheet               # test sheet container (auto-detected)
+  $(basename "$0") build hair               # build hair container (auto-detected)
+  $(basename "$0") test wool                # test wool container (auto-detected)
   $(basename "$0") vm build thread          # explicit VM prefix
   $(basename "$0") vm test yarn             # explicit VM prefix
-  $(basename "$0") container build fiber    # explicit container prefix
-  $(basename "$0") container test sheet     # explicit container prefix
+  $(basename "$0") container build hair     # explicit container prefix
+  $(basename "$0") container test wool      # explicit container prefix
   $(basename "$0") container build all      # build all containers
-  $(basename "$0") lxc build hair           # build hair LXC rootfs
-  $(basename "$0") lxc test hair            # test hair LXC rootfs
-  $(basename "$0") build hair               # build hair (auto-detected as LXC)
+  $(basename "$0") lxc build fiber          # build fiber LXC rootfs
+  $(basename "$0") lxc test fiber           # test fiber LXC rootfs
+  $(basename "$0") build fiber              # build fiber (auto-detected as LXC)
 EOF
 }
 
@@ -316,10 +316,10 @@ resolve_tiers() {
 }
 
 # ── Container support ────────────────────────────────────────────────
-ALL_CONTAINER_TIERS=(fiber sheet page tome gutenberg)
+ALL_CONTAINER_TIERS=(hair wool felt amimono embellisher)
 
 is_container_tier() {
-    case "$1" in fiber|sheet|page|tome|gutenberg) return 0 ;; *) return 1 ;; esac
+    case "$1" in hair|wool|felt|amimono|embellisher) return 0 ;; *) return 1 ;; esac
 }
 
 detect_container_cmd() {
@@ -440,10 +440,10 @@ resolve_container_tiers() {
 }
 
 # ── LXC support ──────────────────────────────────────────────────────
-ALL_LXC_TIERS=(hair wool felt amimono embellisher)
+ALL_LXC_TIERS=(fiber sheet page tome gutenberg)
 
 is_lxc_tier() {
-    case "$1" in hair|wool|felt|amimono|embellisher) return 0 ;; *) return 1 ;; esac
+    case "$1" in fiber|sheet|page|tome|gutenberg) return 0 ;; *) return 1 ;; esac
 }
 
 do_test_lxc() {
@@ -549,19 +549,19 @@ resolve_lxc_tiers() {
 # ── LXC command handler ──────────────────────────────────────────────
 do_lxc_command() {
     local sub_cmd="all"
-    local lxc_image="hair"
+    local lxc_image="fiber"
     local force=false
 
     # Parse: lxc [build|test|all] [tier] [--force]
     if [[ $# -gt 0 ]]; then
         case "$1" in
             build|test|all) sub_cmd="$1"; shift ;;
-            hair|wool|felt|amimono|embellisher) lxc_image="$1"; shift ;;
+            fiber|sheet|page|tome|gutenberg) lxc_image="$1"; shift ;;
         esac
     fi
     if [[ $# -gt 0 ]]; then
         case "$1" in
-            hair|wool|felt|amimono|embellisher|all) lxc_image="$1"; shift ;;
+            fiber|sheet|page|tome|gutenberg|all) lxc_image="$1"; shift ;;
         esac
     fi
     while [[ $# -gt 0 ]]; do
@@ -597,12 +597,12 @@ do_container_command() {
     if [[ $# -gt 0 ]]; then
         case "$1" in
             build|test|all) sub_cmd="$1"; shift ;;
-            fiber|sheet|page|tome|gutenberg) container_image="$1"; shift ;;
+            hair|wool|felt|amimono|embellisher) container_image="$1"; shift ;;
         esac
     fi
     if [[ $# -gt 0 ]]; then
         case "$1" in
-            fiber|sheet|page|tome|gutenberg|all) container_image="$1"; shift ;;
+            hair|wool|felt|amimono|embellisher|all) container_image="$1"; shift ;;
         esac
     fi
     while [[ $# -gt 0 ]]; do
