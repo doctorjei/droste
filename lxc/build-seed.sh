@@ -36,12 +36,10 @@ EOF
 }
 
 # Packages to purge from the genericcloud rootfs.
-# Kernel, bootloader, UEFI, container-irrelevant, and nice-to-have packages.
+# Kernel, bootloader, UEFI, and container-irrelevant packages.
 # Some additional packages (e.g. linux-image-6.12.73+deb13-cloud-amd64,
 # grub-efi, grub-efi-amd64) will be pulled out as dependencies.
-# Nice-to-have packages are moved to the fiber tier instead.
 PURGE_PACKAGES=(
-    # Kernel/boot/UEFI
     busybox
     cloud-initramfs-growroot
     dracut-install
@@ -55,39 +53,21 @@ PURGE_PACKAGES=(
     libefiboot1t64
     libefivar1t64
     libfreetype6
+    libnetplan1
     libpng16-16t64
     linux-image-cloud-amd64
     linux-sysctl-defaults
     mokutil
-    shim-helpers-amd64-signed
-    shim-signed
-    shim-signed-common
-    shim-unsigned
-    # Container-irrelevant
-    cloud-initramfs-growroot
-    libnetplan1
     netplan-generator
     netplan.io
     os-prober
     pci.ids
     pciutils
     python3-netplan
-    # Nice-to-have (moved to fiber tier)
-    apt-listchanges
-    bash-completion
-    bsdextrautils
-    ethtool
-    klibc-utils
-    man-db
-    manpages
-    reportbug
-    screen
-    tcpdump
-    traceroute
-    unattended-upgrades
-    vim
-    vim-runtime
-    whiptail
+    shim-helpers-amd64-signed
+    shim-signed
+    shim-signed-common
+    shim-unsigned
 )
 
 cleanup_mounts() {

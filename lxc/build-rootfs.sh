@@ -123,7 +123,6 @@ find /usr/share/locale -mindepth 1 -maxdepth 1 \
 # ── Install packages ────────────────────────────────────────────
 # Thread packages minus qemu-guest-agent and watchdog
 # (packages already in seed will be skipped by apt)
-# Also includes packages pruned from seed for size (man-db, vim, etc.)
 apt-get update
 apt-get install -y --no-install-recommends \
     lxc podman fuse-overlayfs slirp4netns uidmap systemd-container \
@@ -146,10 +145,7 @@ apt-get install -y --no-install-recommends \
     ltrace \
     pv \
     bsdextrautils xxd \
-    locales \
-    apt-listchanges bash-completion ethtool man-db manpages \
-    reportbug screen tcpdump traceroute \
-    unattended-upgrades vim whiptail
+    locales
 
 # ── Locales ──────────────────────────────────────────────────────
 cat >> /etc/locale.gen <<'LOCALE_LIST'
