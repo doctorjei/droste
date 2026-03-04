@@ -2,7 +2,8 @@
 # Source: debian-13-genericcloud-amd64 (322 packages)
 # minus kernel, bootloader, UEFI, and container-irrelevant packages (28 cut)
 # minus initramfs-tools pair (removed as kernel purge cascade, useless in containers)
-# Result: 292 packages
+# minus nice-to-have packages moved to fiber tier (25 pruned)
+# Result: ~267 packages
 #
 # Cut list (kernel/boot):
 #   busybox, dracut-install, grub-cloud-amd64, grub-common,
@@ -17,26 +18,33 @@
 #   netplan-generator, netplan.io, os-prober, pci.ids, pciutils,
 #   python3-netplan
 #
+# Pruned to fiber (nice-to-have, not needed for minimal system container):
+#   apt-listchanges, bash-completion, bsdextrautils, ethtool, groff-base,
+#   klibc-utils, libgpm2, libklibc, libnewt0.52, libpcap0.8t64,
+#   libpipeline1, libslang2, libwrap0, man-db, manpages,
+#   python3-debianbts, python3-reportbug, reportbug,
+#   screen, tcpdump, traceroute, unattended-upgrades,
+#   vim, vim-runtime, whiptail
+#
+# Kept in seed (cascade protection for seed-target packages):
+#   runit-helper (openssh-server dep), vim-common (vim-tiny dep),
+#   sgml-base + xml-core (polkitd dep chain), sqv (apt dep)
+#
 # Kept (needed as deps for packages we want):
 #   eject (cloud-init), kmod (systemd, lvm2), libbrotli1 (libcurl4t64),
-#   libgpm2 (vim), libtext-charwidth-perl + libtext-wrapi18n-perl (ucf),
+#   libtext-charwidth-perl + libtext-wrapi18n-perl (ucf),
 #   linux-base (util-linux)
 #
-# See memory/seed-deferred-cuts.md for packages considered but kept.
-#
-# Generated: 2026-03-04
+# Generated: 2026-03-04, pruned: 2026-03-04
 adduser
 apparmor
 apt
-apt-listchanges
 apt-utils
 base-files
 base-passwd
 bash
-bash-completion
 bind9-host
 bind9-libs
-bsdextrautils
 bsdutils
 ca-certificates
 cloud-guest-utils
@@ -63,7 +71,6 @@ dosfstools
 dpkg
 e2fsprogs
 eject
-ethtool
 fdisk
 file
 findutils
@@ -72,7 +79,6 @@ gdisk
 genisoimage
 gettext-base
 grep
-groff-base
 gzip
 hostname
 init
@@ -81,7 +87,6 @@ initramfs-tools-bin
 iproute2
 iptables
 iputils-ping
-klibc-utils
 kmod
 less
 libacl1
@@ -126,7 +131,6 @@ libgdbm6t64
 libglib2.0-0t64
 libgmp10
 libgnutls30t64
-libgpm2
 libgssapi-krb5-2
 libhogweed6t64
 libidn2-0
@@ -136,7 +140,6 @@ libjemalloc2
 libjson-c5
 libk5crypto3
 libkeyutils1
-libklibc
 libkmod2
 libkrb5-3
 libkrb5support0
@@ -154,7 +157,6 @@ libmount1
 libncursesw6
 libnetfilter-conntrack3
 libnettle8t64
-libnewt0.52
 libnfnetlink0
 libnftnl11
 libnghttp2-14
@@ -168,9 +170,7 @@ libpam-modules-bin
 libpam-runtime
 libpam-systemd
 libpam0g
-libpcap0.8t64
 libpcre2-8-0
-libpipeline1
 libpolkit-agent-1-0
 libpolkit-gobject-1-0
 libpopt0
@@ -189,7 +189,6 @@ libselinux1
 libsemanage-common
 libsemanage2
 libsepol2
-libslang2
 libsmartcols1
 libsodium23
 libsqlite3-0
@@ -212,7 +211,6 @@ liburcu8t64
 liburing2
 libuuid1
 libuv1t64
-libwrap0
 libwtmpdb0
 libxml2
 libxtables12
@@ -225,8 +223,6 @@ login
 login.defs
 logsave
 lsb-release
-man-db
-manpages
 mawk
 media-types
 mount
@@ -260,7 +256,6 @@ python3-cryptography
 python3-dbus
 python3-debconf
 python3-debian
-python3-debianbts
 python3-distro
 python3-distro-info
 python3-idna
@@ -274,7 +269,6 @@ python3-markupsafe
 python3-minimal
 python3-oauthlib
 python3-referencing
-python3-reportbug
 python3-requests
 python3-rpds-py
 python3-urllib3
@@ -283,9 +277,7 @@ python3.13
 python3.13-minimal
 qemu-utils
 readline-common
-reportbug
 runit-helper
-screen
 sed
 sensible-utils
 sgml-base
@@ -299,21 +291,15 @@ systemd-sysv
 systemd-timesyncd
 sysvinit-utils
 tar
-tcpdump
-traceroute
 tzdata
 ucf
 udev
-unattended-upgrades
+vim-common
+vim-tiny
 util-linux
 uuid-runtime
-vim
-vim-common
-vim-runtime
-vim-tiny
 wget
-whiptail
-xml-core
 xz-utils
+xml-core
 zlib1g
 zstd
