@@ -1,0 +1,90 @@
+name: Build Container Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'containers/**'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push fiber
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/droste-fiber/
+          file: containers/droste-fiber/Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:latest
+          cache-from: type=gha,scope=fiber
+          cache-to: type=gha,mode=max,scope=fiber
+
+      - name: Build and push sheet
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/droste-sheet/
+          file: containers/droste-sheet/Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:latest
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:latest
+          cache-from: type=gha,scope=sheet
+          cache-to: type=gha,mode=max,scope=sheet
+
+      - name: Build and push page
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/droste-page/
+          file: containers/droste-page/Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:latest
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:latest
+          cache-from: type=gha,scope=page
+          cache-to: type=gha,mode=max,scope=page
+
+      - name: Build and push tome
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/droste-tome/
+          file: containers/droste-tome/Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:latest
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:latest
+          cache-from: type=gha,scope=tome
+          cache-to: type=gha,mode=max,scope=tome
+
+      - name: Build and push gutenberg
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/droste-gutenberg/
+          file: containers/droste-gutenberg/Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:latest
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:latest
+          cache-from: type=gha,scope=gutenberg
+          cache-to: type=gha,mode=max,scope=gutenberg

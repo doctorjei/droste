@@ -1,4 +1,5 @@
-FROM droste-fiber
+ARG BASE_IMAGE=droste-fiber
+FROM ${BASE_IMAGE}
 
 LABEL description="droste-sheet: VM tooling layer (yarn equivalent)"
 

@@ -1,4 +1,5 @@
-FROM droste-sheet
+ARG BASE_IMAGE=droste-sheet
+FROM ${BASE_IMAGE}
 
 LABEL description="droste-page: HA/cluster layer (fabric equivalent)"
 

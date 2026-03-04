@@ -22,9 +22,10 @@ Build and test droste images.
 
 Commands:
   prereqs    Check build host prerequisites
-  build      Build the image(s) with Packer
+  build      Build the image(s) with Packer (or container engine)
   test       Boot existing image(s) and run smoke tests
   all        Prereqs + build + test (default)
+  vm         Build/test VM images (explicit prefix)
   container  Build/test container images (podman/docker)
   help       Show this help message
 
@@ -44,6 +45,8 @@ Images (container):
   tome       Testing/security layer (tapestry equivalent)
   gutenberg  Dev toolchain (loom equivalent)
 
+Bare tier names are auto-detected — no overlap between VM and container names.
+
 Options:
   --force          Overwrite existing images (required for 'build all')
   --ssh-key FILE   Path to SSH public key (default: auto-detect)
@@ -56,8 +59,12 @@ Examples:
   $(basename "$0") test all                 # smoke test all tiers
   $(basename "$0") build all --force        # build all tiers (overwrite)
   $(basename "$0") test yarn --ssh-key ~/.ssh/id_ed25519.pub
-  $(basename "$0") container build fiber    # build fiber container
-  $(basename "$0") container test sheet     # test sheet container
+  $(basename "$0") build fiber              # build fiber container (auto-detected)
+  $(basename "$0") test sheet               # test sheet container (auto-detected)
+  $(basename "$0") vm build thread          # explicit VM prefix
+  $(basename "$0") vm test yarn             # explicit VM prefix
+  $(basename "$0") container build fiber    # explicit container prefix
+  $(basename "$0") container test sheet     # explicit container prefix
   $(basename "$0") container build all      # build all containers
 EOF
 }
@@ -296,6 +303,10 @@ resolve_tiers() {
 # ── Container support ────────────────────────────────────────────────
 ALL_CONTAINER_TIERS=(fiber sheet page tome gutenberg)
 
+is_container_tier() {
+    case "$1" in fiber|sheet|page|tome|gutenberg) return 0 ;; *) return 1 ;; esac
+}
+
 detect_container_cmd() {
     if command -v podman &>/dev/null; then
         echo podman
@@ -458,6 +469,83 @@ do_container_command() {
     esac
 }
 
+# ── VM command handler (mirrors container command) ────────────────────
+do_vm_command() {
+    local sub_cmd="all"
+    local vm_image="thread"
+    local force=false
+
+    # Parse: vm [prereqs|build|test|all] [tier] [--force] [--ssh-key] [--ssh-port]
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            prereqs|build|test|all) sub_cmd="$1"; shift ;;
+            thread|yarn|fabric|tapestry|loom|jacquard) vm_image="$1"; shift ;;
+        esac
+    fi
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            thread|yarn|fabric|tapestry|loom|jacquard|all) vm_image="$1"; shift ;;
+        esac
+    fi
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force)    force=true; shift ;;
+            --ssh-key)  SSH_KEY="$2"; shift 2 ;;
+            --ssh-port) SSH_PORT="$2"; shift 2 ;;
+            *)          echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+        esac
+    done
+
+    # Auto-detect SSH key if not provided
+    if [[ -z "$SSH_KEY" ]]; then
+        for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
+            if [[ -f "$candidate" ]]; then
+                SSH_KEY="$candidate"
+                break
+            fi
+        done
+        if [[ -z "$SSH_KEY" ]]; then
+            echo "Error: no SSH public key found. Use --ssh-key FILE." >&2
+            exit 1
+        fi
+        echo "Using SSH key: $SSH_KEY"
+    fi
+
+    # Set globals for resolve_tiers / check_existing_images
+    IMAGE="$vm_image"
+    FORCE="$force"
+
+    case "$sub_cmd" in
+        prereqs)
+            do_prereqs
+            ;;
+        build)
+            if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+                check_existing_images
+            fi
+            for tier in $(resolve_tiers); do
+                echo ""
+                do_build_image "$tier"
+            done
+            ;;
+        test)
+            for tier in $(resolve_tiers); do
+                do_test "$tier"
+            done
+            ;;
+        all)
+            do_prereqs
+            if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+                check_existing_images
+            fi
+            for tier in $(resolve_tiers); do
+                echo ""
+                do_build_image "$tier"
+            done
+            ;;
+    esac
+}
+
 # ── Parse command and image ──────────────────────────────────────────
 COMMAND="all"
 IMAGE="thread"
@@ -472,11 +560,20 @@ if [[ $# -gt 0 ]]; then
             do_container_command "$@"
             exit 0
             ;;
+        vm)
+            shift
+            do_vm_command "$@"
+            exit 0
+            ;;
         prereqs|build|test|help|-h|--help)
             COMMAND="$1"
             shift
             ;;
         thread|yarn|fabric|tapestry|loom|jacquard|all)
+            IMAGE="$1"
+            shift
+            ;;
+        fiber|sheet|page|tome|gutenberg)
             IMAGE="$1"
             shift
             ;;
@@ -494,6 +591,10 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
+        fiber|sheet|page|tome|gutenberg)
+            IMAGE="$1"
+            shift
+            ;;
     esac
 fi
 
@@ -507,19 +608,21 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Auto-detect SSH key if not provided
-if [[ -z "$SSH_KEY" ]]; then
-    for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
-        if [[ -f "$candidate" ]]; then
-            SSH_KEY="$candidate"
-            break
-        fi
-    done
+# Auto-detect SSH key if not provided (skip for container tiers)
+if ! is_container_tier "$IMAGE"; then
     if [[ -z "$SSH_KEY" ]]; then
-        echo "Error: no SSH public key found. Use --ssh-key FILE." >&2
-        exit 1
+        for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
+            if [[ -f "$candidate" ]]; then
+                SSH_KEY="$candidate"
+                break
+            fi
+        done
+        if [[ -z "$SSH_KEY" ]]; then
+            echo "Error: no SSH public key found. Use --ssh-key FILE." >&2
+            exit 1
+        fi
+        echo "Using SSH key: $SSH_KEY"
     fi
-    echo "Using SSH key: $SSH_KEY"
 fi
 
 # ── Guard: refuse to overwrite existing images without --force ────────
@@ -545,31 +648,52 @@ check_existing_images() {
 # ── Main ────────────────────────────────────────────────────────────
 case "$COMMAND" in
     all)
-        do_prereqs
-        if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
-            check_existing_images
+        if is_container_tier "$IMAGE"; then
+            for tier in $(resolve_container_tiers "$IMAGE"); do
+                echo ""
+                do_build_container "$tier"
+            done
+        else
+            do_prereqs
+            if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+                check_existing_images
+            fi
+            for tier in $(resolve_tiers); do
+                echo ""
+                do_build_image "$tier"
+            done
         fi
-        for tier in $(resolve_tiers); do
-            echo ""
-            do_build_image "$tier"
-        done
         ;;
     prereqs)
         do_prereqs
         ;;
     build)
-        if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
-            check_existing_images
+        if is_container_tier "$IMAGE"; then
+            for tier in $(resolve_container_tiers "$IMAGE"); do
+                echo ""
+                do_build_container "$tier"
+            done
+        else
+            if [[ "$IMAGE" == "all" && "$FORCE" == false ]]; then
+                check_existing_images
+            fi
+            for tier in $(resolve_tiers); do
+                echo ""
+                do_build_image "$tier"
+            done
         fi
-        for tier in $(resolve_tiers); do
-            echo ""
-            do_build_image "$tier"
-        done
         ;;
     test)
-        for tier in $(resolve_tiers); do
-            do_test "$tier"
-        done
+        if is_container_tier "$IMAGE"; then
+            for tier in $(resolve_container_tiers "$IMAGE"); do
+                echo ""
+                do_test_container "$tier"
+            done
+        else
+            for tier in $(resolve_tiers); do
+                do_test "$tier"
+            done
+        fi
         ;;
     help|-h|--help)
         usage

@@ -1,4 +1,5 @@
-FROM droste-tome
+ARG BASE_IMAGE=droste-tome
+FROM ${BASE_IMAGE}
 
 LABEL description="droste-gutenberg: C/C++ development toolchain (loom equivalent)"
 
