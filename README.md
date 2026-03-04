@@ -1,10 +1,20 @@
 # Droste
 
-Nested virtualization VM images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built as layered QCOW2 images on top of Debian 13 genericcloud.
+Nested virtualization images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built on Debian 13 (Trixie) as layered images across three formats: VM (QCOW2), LXC (rootfs tarballs), and OCI (Containerfiles).
+
+## Image Formats
+
+| Format | Base | Use case | Init | Kernel |
+|--------|------|----------|------|--------|
+| **VM** | genericcloud qcow2 | Full nested virt, hardware passthrough | systemd | Own kernel |
+| **LXC** | genericcloud → seed | System containers, kernel module testing | systemd | Host kernel |
+| **OCI** | debian:trixie-slim | Application containers, CI/CD | None | Host kernel |
 
 ## Tiers
 
-Each tier builds on the previous one, adding tools for progressively more complex infrastructure scenarios.
+Each tier builds on the previous one. Pick the smallest that has what you need.
+
+### VM Tiers (textile metaphor)
 
 | Tier | Based on | Focus | Size |
 |------|----------|-------|------|
@@ -15,7 +25,30 @@ Each tier builds on the previous one, adding tools for progressively more comple
 | **loom** | tapestry | C/C++ development toolchain | 1.5 GB |
 | **jacquard** | loom | Proxmox VE (PVE kernel, ZFS, corosync) | 2.2 GB |
 
-Pick the smallest tier that has what you need. Most container and networking work only needs **thread**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric**.
+### LXC Tiers (paper/publishing metaphor)
+
+| Tier | Based on | Focus | Packages | Size |
+|------|----------|-------|----------|------|
+| **seed** | genericcloud (stripped) | Minimal system container base | 292 | 101 MB |
+| **fiber** | seed | Basic tools, containers, networking | 440 | 251 MB |
+| **sheet** | fiber | Storage, VM tooling, kernel-dependent tools | 491 | 337 MB |
+| **page** | sheet | HA clustering, DRBD, iSCSI, Ceph | 635 | 403 MB |
+| **tome** | page | Testing, security, observability | 764 | 628 MB |
+| **gutenberg** | tome | C/C++ development toolchain | 839 | 790 MB |
+
+### OCI Tiers (textile crafting metaphor)
+
+| Tier | Based on | Focus |
+|------|----------|-------|
+| **hair** | debian:trixie-slim | Basic tools, containers, networking |
+| **wool** | hair | Storage, VM tooling |
+| **felt** | wool | HA clustering, Ceph |
+| **amimono** | felt | Testing, security, observability |
+| **embellisher** | amimono | C/C++ development toolchain |
+
+LXC tiers include kernel-dependent packages (lvm2, DRBD, iSCSI, etc.) that work in system containers but not OCI application containers. No jacquard equivalent exists for LXC or OCI (hypervisor stack requires its own kernel).
+
+Pick the smallest tier that has what you need. Most container and networking work only needs **thread** / **fiber** / **hair**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric** / **page** / **felt**.
 
 Each image includes a `droste` user (UID 1000) with passwordless sudo. SSH accepts both key and password auth. See [BUILDING.md](BUILDING.md) for build and test instructions.
 
