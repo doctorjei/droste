@@ -1,7 +1,7 @@
-ARG BASE_IMAGE=droste-sheet
+ARG BASE_IMAGE=droste-wool
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-page: HA/cluster layer (fabric equivalent)"
+LABEL description="droste-felt: HA/cluster layer (fabric equivalent)"
 
 USER root
 

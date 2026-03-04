@@ -1,7 +1,7 @@
 FROM debian:trixie-slim
 
 LABEL maintainer="droste" \
-      description="droste-fiber: container-ready base (thread equivalent)"
+      description="droste-hair: container-ready base (thread equivalent)"
 
 # ── Strip documentation ──────────────────────────────────────────
 RUN printf '%s\n' \

@@ -31,60 +31,60 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push fiber
+      - name: Build and push hair
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-fiber/
-          file: containers/droste-fiber/Containerfile
+          context: containers/droste-hair/
+          file: containers/droste-hair/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:latest
-          cache-from: type=gha,scope=fiber
-          cache-to: type=gha,mode=max,scope=fiber
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:latest
+          cache-from: type=gha,scope=hair
+          cache-to: type=gha,mode=max,scope=hair
 
-      - name: Build and push sheet
+      - name: Build and push wool
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-sheet/
-          file: containers/droste-sheet/Containerfile
+          context: containers/droste-wool/
+          file: containers/droste-wool/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-wool:latest
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:latest
-          cache-from: type=gha,scope=sheet
-          cache-to: type=gha,mode=max,scope=sheet
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:latest
+          cache-from: type=gha,scope=wool
+          cache-to: type=gha,mode=max,scope=wool
 
-      - name: Build and push page
+      - name: Build and push felt
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-page/
-          file: containers/droste-page/Containerfile
+          context: containers/droste-felt/
+          file: containers/droste-felt/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-felt:latest
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:latest
-          cache-from: type=gha,scope=page
-          cache-to: type=gha,mode=max,scope=page
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-wool:latest
+          cache-from: type=gha,scope=felt
+          cache-to: type=gha,mode=max,scope=felt
 
-      - name: Build and push tome
+      - name: Build and push amimono
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-tome/
-          file: containers/droste-tome/Containerfile
+          context: containers/droste-amimono/
+          file: containers/droste-amimono/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-amimono:latest
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:latest
-          cache-from: type=gha,scope=tome
-          cache-to: type=gha,mode=max,scope=tome
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-felt:latest
+          cache-from: type=gha,scope=amimono
+          cache-to: type=gha,mode=max,scope=amimono
 
-      - name: Build and push gutenberg
+      - name: Build and push embellisher
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-gutenberg/
-          file: containers/droste-gutenberg/Containerfile
+          context: containers/droste-embellisher/
+          file: containers/droste-embellisher/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-embellisher:latest
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:latest
-          cache-from: type=gha,scope=gutenberg
-          cache-to: type=gha,mode=max,scope=gutenberg
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-amimono:latest
+          cache-from: type=gha,scope=embellisher
+          cache-to: type=gha,mode=max,scope=embellisher

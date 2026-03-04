@@ -1,7 +1,7 @@
-ARG BASE_IMAGE=droste-fiber
+ARG BASE_IMAGE=droste-hair
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-sheet: VM tooling layer (yarn equivalent)"
+LABEL description="droste-wool: VM tooling layer (yarn equivalent)"
 
 USER root
 

@@ -2,16 +2,12 @@
 # Build LXC rootfs tarballs for droste tiers.
 #
 # Usage:
-#   lxc/build-rootfs.sh pre-hair    # Download and cache base rootfs
-#   lxc/build-rootfs.sh hair        # Build hair tier (thread equivalent)
+#   lxc/build-rootfs.sh fiber   # Build fiber tier (thread equivalent) on seed
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-DOWNLOAD_DIR="$PROJECT_DIR/download"
 OUTPUT_DIR="$PROJECT_DIR/output"
-
-BASE_URL="https://images.linuxcontainers.org/images/debian/trixie/amd64/cloud"
 
 usage() {
     cat <<EOF
@@ -20,14 +16,21 @@ Usage: $(basename "$0") TIER
 Build LXC rootfs tarballs for droste tiers.
 
 Tiers:
-  pre-hair   Download and verify base Debian rootfs from linuxcontainers.org
-  hair       Build hair tier (thread equivalent) on top of pre-hair
+  fiber      Build fiber tier (thread equivalent) on top of seed
+  sheet      Build sheet tier (yarn equivalent) on top of fiber
+  page       Build page tier (fabric equivalent) on top of sheet
+  tome       Build tome tier (tapestry equivalent) on top of page
+  gutenberg  Build gutenberg tier (loom equivalent) on top of tome
+
+Requires droste-seed.tar.xz in output/ (built by build-seed.sh).
+Each tier requires the previous tier's tarball in output/.
 
 Output:
-  output/droste-pre-hair.tar.xz   Base rootfs (direct from upstream)
-  output/droste-hair.tar.gz       Hair tier rootfs
-
-Downloads are cached in download/ to avoid redundant fetches.
+  output/droste-fiber.tar.gz      Fiber tier rootfs
+  output/droste-sheet.tar.gz      Sheet tier rootfs
+  output/droste-page.tar.gz       Page tier rootfs
+  output/droste-tome.tar.gz       Tome tier rootfs
+  output/droste-gutenberg.tar.gz  Gutenberg tier rootfs
 EOF
 }
 
@@ -47,82 +50,27 @@ cleanup() {
     fi
 }
 
-# ── Pre-hair: download and verify upstream rootfs ─────────────────────
-do_build_pre_hair() {
-    mkdir -p "$DOWNLOAD_DIR" "$OUTPUT_DIR"
-
-    echo "Fetching latest build date from images.linuxcontainers.org..."
-    local latest_date
-    latest_date=$(curl -sL "${BASE_URL}/" \
-        | grep -oE '[0-9]{8}_[0-9]{2}:[0-9]{2}' | sort -r | head -1)
-
-    if [[ -z "$latest_date" ]]; then
-        echo "Error: could not determine latest build date" >&2
+# ── Fiber: provision thread-equivalent packages on seed ────────────
+do_build_fiber() {
+    # Ensure seed exists
+    if [[ ! -f "$OUTPUT_DIR/droste-seed.tar.xz" ]]; then
+        echo "Error: seed rootfs not found at $OUTPUT_DIR/droste-seed.tar.xz" >&2
+        echo "Build it first with: lxc/build-seed.sh" >&2
         exit 1
-    fi
-    echo "Latest build: $latest_date"
-
-    local rootfs_url="${BASE_URL}/${latest_date}/rootfs.tar.xz"
-    local sha256_url="${BASE_URL}/${latest_date}/SHA256SUMS"
-    local cached="$DOWNLOAD_DIR/rootfs-${latest_date}.tar.xz"
-
-    # Download if not cached
-    if [[ -f "$cached" ]]; then
-        echo "Using cached download: $cached"
-    else
-        echo "Downloading rootfs.tar.xz (~116 MB)..."
-        curl -L --progress-bar -o "$cached.tmp" "$rootfs_url"
-        mv "$cached.tmp" "$cached"
-    fi
-
-    # Verify SHA256
-    echo "Verifying SHA256..."
-    local expected_sha
-    expected_sha=$(curl -sL "$sha256_url" | grep 'rootfs.tar.xz' | awk '{print $1}')
-
-    if [[ -z "$expected_sha" ]]; then
-        echo "Warning: could not fetch SHA256 checksum, skipping verification" >&2
-    else
-        local actual_sha
-        actual_sha=$(sha256sum "$cached" | awk '{print $1}')
-        if [[ "$expected_sha" != "$actual_sha" ]]; then
-            echo "Error: SHA256 mismatch" >&2
-            echo "  expected: $expected_sha" >&2
-            echo "  actual:   $actual_sha" >&2
-            rm -f "$cached"
-            exit 1
-        fi
-        echo "SHA256 verified."
-    fi
-
-    # Copy to output
-    cp "$cached" "$OUTPUT_DIR/droste-pre-hair.tar.xz"
-    echo ""
-    echo "Output: $OUTPUT_DIR/droste-pre-hair.tar.xz"
-    ls -lh "$OUTPUT_DIR/droste-pre-hair.tar.xz"
-}
-
-# ── Hair: provision thread-equivalent packages on pre-hair ────────────
-do_build_hair() {
-    # Ensure pre-hair exists
-    if [[ ! -f "$OUTPUT_DIR/droste-pre-hair.tar.xz" ]]; then
-        echo "Pre-hair rootfs not found, building first..."
-        do_build_pre_hair
-        echo ""
     fi
 
     # Require root for chroot and bind mounts
     if [[ $EUID -ne 0 ]]; then
-        echo "Error: hair build requires root (for chroot and bind mounts)" >&2
+        echo "Error: fiber build requires root (for chroot and bind mounts)" >&2
         exit 1
     fi
 
     local work_dir
-    work_dir=$(mktemp -d "/tmp/droste-hair.XXXXXX")
+    work_dir=$(mktemp -d "/tmp/droste-fiber.XXXXXX")
     trap "cleanup '$work_dir'" EXIT
 
-    echo "Extracting pre-hair rootfs to $work_dir..."
-    tar -xf "$OUTPUT_DIR/droste-pre-hair.tar.xz" -C "$work_dir"
+    echo "Extracting seed rootfs to $work_dir..."
+    tar -xf "$OUTPUT_DIR/droste-seed.tar.xz" -C "$work_dir"
 
     echo "Setting up bind mounts..."
     mount --bind /dev "$work_dir/dev"
@@ -130,7 +78,8 @@ do_build_hair() {
     mount --bind /sys "$work_dir/sys"
     mount -t devpts devpts "$work_dir/dev/pts"
 
-    # DNS resolution inside chroot
+    # DNS resolution inside chroot (remove symlink if present, e.g. systemd-resolved)
+    rm -f "$work_dir/etc/resolv.conf"
     cp /etc/resolv.conf "$work_dir/etc/resolv.conf"
 
     # Copy files needed by provision script
@@ -173,6 +122,7 @@ find /usr/share/locale -mindepth 1 -maxdepth 1 \
 
 # ── Install packages ────────────────────────────────────────────
 # Thread packages minus qemu-guest-agent and watchdog
+# (packages already in seed will be skipped by apt)
 apt-get update
 apt-get install -y --no-install-recommends \
     lxc podman fuse-overlayfs slirp4netns uidmap systemd-container \
@@ -281,11 +231,350 @@ PROVISION
     # Create output tarball
     echo "Creating output tarball..."
     mkdir -p "$OUTPUT_DIR"
-    tar -czf "$OUTPUT_DIR/droste-hair.tar.gz" -C "$work_dir" .
+    tar -czf "$OUTPUT_DIR/droste-fiber.tar.gz" -C "$work_dir" .
 
     echo ""
-    echo "Output: $OUTPUT_DIR/droste-hair.tar.gz"
-    ls -lh "$OUTPUT_DIR/droste-hair.tar.gz"
+    echo "Output: $OUTPUT_DIR/droste-fiber.tar.gz"
+    ls -lh "$OUTPUT_DIR/droste-fiber.tar.gz"
+
+    # Clean up work directory
+    rm -rf "$work_dir"
+    trap - EXIT
+}
+
+# ── Sheet: provision yarn-equivalent packages on fiber ───────────────
+do_build_sheet() {
+    # Ensure fiber exists
+    if [[ ! -f "$OUTPUT_DIR/droste-fiber.tar.gz" ]]; then
+        echo "Error: fiber rootfs not found at $OUTPUT_DIR/droste-fiber.tar.gz" >&2
+        echo "Build it first with: lxc/build-rootfs.sh fiber" >&2
+        exit 1
+    fi
+
+    # Require root for chroot and bind mounts
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: sheet build requires root (for chroot and bind mounts)" >&2
+        exit 1
+    fi
+
+    local work_dir
+    work_dir=$(mktemp -d "/tmp/droste-sheet.XXXXXX")
+    trap "cleanup '$work_dir'" EXIT
+
+    echo "Extracting fiber rootfs to $work_dir..."
+    tar -xf "$OUTPUT_DIR/droste-fiber.tar.gz" -C "$work_dir"
+
+    echo "Setting up bind mounts..."
+    mount --bind /dev "$work_dir/dev"
+    mount --bind /proc "$work_dir/proc"
+    mount --bind /sys "$work_dir/sys"
+    mount -t devpts devpts "$work_dir/dev/pts"
+
+    # DNS resolution inside chroot
+    rm -f "$work_dir/etc/resolv.conf"
+    cp /etc/resolv.conf "$work_dir/etc/resolv.conf"
+
+    # Write provision script
+    cat > "$work_dir/tmp/provision.sh" <<'PROVISION'
+#!/bin/bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+echo "Packages before: $(dpkg -l | grep '^ii' | wc -l)"
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    ansible gettext-base \
+    squashfs-tools cloud-image-utils qemu-utils \
+    dosfstools mtools ntfs-3g \
+    gdisk parted btrfs-progs \
+    cryptsetup mdadm \
+    ncdu \
+    hping3 bmon nethogs nicstat ethtool \
+    lshw sysbench picocom \
+    lvm2 thin-provisioning-tools nbd-client quota \
+    pciutils hdparm dmidecode bridge-utils
+
+echo "Packages after: $(dpkg -l | grep '^ii' | wc -l)"
+
+# ── Clean up ─────────────────────────────────────────────────────
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+rm -f /tmp/provision.sh
+PROVISION
+
+    chmod +x "$work_dir/tmp/provision.sh"
+
+    echo "Running provision script in chroot..."
+    chroot "$work_dir" /tmp/provision.sh
+
+    # Unmount bind mounts
+    echo "Cleaning up mounts..."
+    cleanup_mounts "$work_dir"
+
+    # Create output tarball
+    echo "Creating output tarball..."
+    mkdir -p "$OUTPUT_DIR"
+    tar -czf "$OUTPUT_DIR/droste-sheet.tar.gz" -C "$work_dir" .
+
+    echo ""
+    echo "Output: $OUTPUT_DIR/droste-sheet.tar.gz"
+    ls -lh "$OUTPUT_DIR/droste-sheet.tar.gz"
+
+    # Clean up work directory
+    rm -rf "$work_dir"
+    trap - EXIT
+}
+
+# ── Page: provision fabric-equivalent packages on sheet ──────────────
+do_build_page() {
+    # Ensure sheet exists
+    if [[ ! -f "$OUTPUT_DIR/droste-sheet.tar.gz" ]]; then
+        echo "Error: sheet rootfs not found at $OUTPUT_DIR/droste-sheet.tar.gz" >&2
+        echo "Build it first with: lxc/build-rootfs.sh sheet" >&2
+        exit 1
+    fi
+
+    # Require root for chroot and bind mounts
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: page build requires root (for chroot and bind mounts)" >&2
+        exit 1
+    fi
+
+    local work_dir
+    work_dir=$(mktemp -d "/tmp/droste-page.XXXXXX")
+    trap "cleanup '$work_dir'" EXIT
+
+    echo "Extracting sheet rootfs to $work_dir..."
+    tar -xf "$OUTPUT_DIR/droste-sheet.tar.gz" -C "$work_dir"
+
+    echo "Setting up bind mounts..."
+    mount --bind /dev "$work_dir/dev"
+    mount --bind /proc "$work_dir/proc"
+    mount --bind /sys "$work_dir/sys"
+    mount -t devpts devpts "$work_dir/dev/pts"
+
+    # DNS resolution inside chroot
+    rm -f "$work_dir/etc/resolv.conf"
+    cp /etc/resolv.conf "$work_dir/etc/resolv.conf"
+
+    # Write provision script
+    cat > "$work_dir/tmp/provision.sh" <<'PROVISION'
+#!/bin/bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+echo "Packages before: $(dpkg -l | grep '^ii' | wc -l)"
+
+apt-get update
+
+# Main batch
+apt-get install -y --no-install-recommends \
+    clustershell \
+    pcs pacemaker pacemaker-cli-utils resource-agents \
+    keepalived ebtables fence-agents-common \
+    pxelinux syslinux-common \
+    drbd-utils sbd dlm-controld \
+    open-iscsi targetcli-fb multipath-tools
+
+# Individual (large)
+apt-get install -y --no-install-recommends ceph-common
+
+echo "Packages after: $(dpkg -l | grep '^ii' | wc -l)"
+
+# ── Clean up ─────────────────────────────────────────────────────
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+rm -f /tmp/provision.sh
+PROVISION
+
+    chmod +x "$work_dir/tmp/provision.sh"
+
+    echo "Running provision script in chroot..."
+    chroot "$work_dir" /tmp/provision.sh
+
+    # Unmount bind mounts
+    echo "Cleaning up mounts..."
+    cleanup_mounts "$work_dir"
+
+    # Create output tarball
+    echo "Creating output tarball..."
+    mkdir -p "$OUTPUT_DIR"
+    tar -czf "$OUTPUT_DIR/droste-page.tar.gz" -C "$work_dir" .
+
+    echo ""
+    echo "Output: $OUTPUT_DIR/droste-page.tar.gz"
+    ls -lh "$OUTPUT_DIR/droste-page.tar.gz"
+
+    # Clean up work directory
+    rm -rf "$work_dir"
+    trap - EXIT
+}
+
+# ── Tome: provision tapestry-equivalent packages on page ─────────────
+do_build_tome() {
+    # Ensure page exists
+    if [[ ! -f "$OUTPUT_DIR/droste-page.tar.gz" ]]; then
+        echo "Error: page rootfs not found at $OUTPUT_DIR/droste-page.tar.gz" >&2
+        echo "Build it first with: lxc/build-rootfs.sh page" >&2
+        exit 1
+    fi
+
+    # Require root for chroot and bind mounts
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: tome build requires root (for chroot and bind mounts)" >&2
+        exit 1
+    fi
+
+    local work_dir
+    work_dir=$(mktemp -d "/tmp/droste-tome.XXXXXX")
+    trap "cleanup '$work_dir'" EXIT
+
+    echo "Extracting page rootfs to $work_dir..."
+    tar -xf "$OUTPUT_DIR/droste-page.tar.gz" -C "$work_dir"
+
+    echo "Setting up bind mounts..."
+    mount --bind /dev "$work_dir/dev"
+    mount --bind /proc "$work_dir/proc"
+    mount --bind /sys "$work_dir/sys"
+    mount -t devpts devpts "$work_dir/dev/pts"
+
+    # DNS resolution inside chroot
+    rm -f "$work_dir/etc/resolv.conf"
+    cp /etc/resolv.conf "$work_dir/etc/resolv.conf"
+
+    # Write provision script
+    cat > "$work_dir/tmp/provision.sh" <<'PROVISION'
+#!/bin/bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+echo "Packages before: $(dpkg -l | grep '^ii' | wc -l)"
+
+apt-get update
+
+# Main batch
+apt-get install -y --no-install-recommends \
+    openvswitch-switch nmap bird2 \
+    haproxy apache2-utils \
+    fio stress-ng iperf3 \
+    buildah skopeo \
+    prometheus-node-exporter lnav \
+    postgresql-client redis-tools \
+    lynis aide \
+    arp-scan tcpreplay auditd \
+    blktrace xorriso ipmitool \
+    sg3-utils smartmontools apparmor-utils
+
+# Individual (large, ~124 MB)
+apt-get install -y --no-install-recommends tshark
+
+# Individual (large, ARM emulator)
+apt-get install -y --no-install-recommends qemu-system-arm
+
+echo "Packages after: $(dpkg -l | grep '^ii' | wc -l)"
+
+# ── Clean up ─────────────────────────────────────────────────────
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+rm -f /tmp/provision.sh
+PROVISION
+
+    chmod +x "$work_dir/tmp/provision.sh"
+
+    echo "Running provision script in chroot..."
+    chroot "$work_dir" /tmp/provision.sh
+
+    # Unmount bind mounts
+    echo "Cleaning up mounts..."
+    cleanup_mounts "$work_dir"
+
+    # Create output tarball
+    echo "Creating output tarball..."
+    mkdir -p "$OUTPUT_DIR"
+    tar -czf "$OUTPUT_DIR/droste-tome.tar.gz" -C "$work_dir" .
+
+    echo ""
+    echo "Output: $OUTPUT_DIR/droste-tome.tar.gz"
+    ls -lh "$OUTPUT_DIR/droste-tome.tar.gz"
+
+    # Clean up work directory
+    rm -rf "$work_dir"
+    trap - EXIT
+}
+
+# ── Gutenberg: provision loom-equivalent packages on tome ────────────
+do_build_gutenberg() {
+    # Ensure tome exists
+    if [[ ! -f "$OUTPUT_DIR/droste-tome.tar.gz" ]]; then
+        echo "Error: tome rootfs not found at $OUTPUT_DIR/droste-tome.tar.gz" >&2
+        echo "Build it first with: lxc/build-rootfs.sh tome" >&2
+        exit 1
+    fi
+
+    # Require root for chroot and bind mounts
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: gutenberg build requires root (for chroot and bind mounts)" >&2
+        exit 1
+    fi
+
+    local work_dir
+    work_dir=$(mktemp -d "/tmp/droste-gutenberg.XXXXXX")
+    trap "cleanup '$work_dir'" EXIT
+
+    echo "Extracting tome rootfs to $work_dir..."
+    tar -xf "$OUTPUT_DIR/droste-tome.tar.gz" -C "$work_dir"
+
+    echo "Setting up bind mounts..."
+    mount --bind /dev "$work_dir/dev"
+    mount --bind /proc "$work_dir/proc"
+    mount --bind /sys "$work_dir/sys"
+    mount -t devpts devpts "$work_dir/dev/pts"
+
+    # DNS resolution inside chroot
+    rm -f "$work_dir/etc/resolv.conf"
+    cp /etc/resolv.conf "$work_dir/etc/resolv.conf"
+
+    # Write provision script
+    cat > "$work_dir/tmp/provision.sh" <<'PROVISION'
+#!/bin/bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+echo "Packages before: $(dpkg -l | grep '^ii' | wc -l)"
+
+apt-get update
+apt-get install -y --no-install-recommends \
+    build-essential cmake pkg-config \
+    autoconf automake libtool \
+    gdb valgrind \
+    ccache ninja-build bear
+
+echo "Packages after: $(dpkg -l | grep '^ii' | wc -l)"
+
+# ── Clean up ─────────────────────────────────────────────────────
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+rm -f /tmp/provision.sh
+PROVISION
+
+    chmod +x "$work_dir/tmp/provision.sh"
+
+    echo "Running provision script in chroot..."
+    chroot "$work_dir" /tmp/provision.sh
+
+    # Unmount bind mounts
+    echo "Cleaning up mounts..."
+    cleanup_mounts "$work_dir"
+
+    # Create output tarball
+    echo "Creating output tarball..."
+    mkdir -p "$OUTPUT_DIR"
+    tar -czf "$OUTPUT_DIR/droste-gutenberg.tar.gz" -C "$work_dir" .
+
+    echo ""
+    echo "Output: $OUTPUT_DIR/droste-gutenberg.tar.gz"
+    ls -lh "$OUTPUT_DIR/droste-gutenberg.tar.gz"
 
     # Clean up work directory
     rm -rf "$work_dir"
@@ -294,8 +583,11 @@ PROVISION
 
 # ── Main ─────────────────────────────────────────────────────────────
 case "${1:-}" in
-    pre-hair)  do_build_pre_hair ;;
-    hair)      do_build_hair ;;
+    fiber)     do_build_fiber ;;
+    sheet)     do_build_sheet ;;
+    page)      do_build_page ;;
+    tome)      do_build_tome ;;
+    gutenberg) do_build_gutenberg ;;
     -h|--help) usage ;;
     *)
         if [[ -z "${1:-}" ]]; then
