@@ -25,3 +25,10 @@ users:
       - "${SSH_PUBLIC_KEY}"
 
 ssh_pwauth: true
+
+# Pre-create virtiofs mount point and add fstab entry.
+# The mount only succeeds if the VM was started with --share.
+runcmd:
+  - mkdir -p /mnt/share
+  - grep -q virtiofs /etc/fstab || printf 'share\t/mnt/share\tvirtiofs\tdefaults,nofail\t0\t0\n' >> /etc/fstab
+  - mount /mnt/share 2>/dev/null || true

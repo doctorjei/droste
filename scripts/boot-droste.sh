@@ -3,12 +3,15 @@
 #
 # Creates an ephemeral QCOW2 overlay by default (changes discarded on exit).
 # Use --persist for iterative testing with a persistent overlay.
+# Use --share to mount a host directory inside the guest via virtiofs.
 #
 # Prerequisites: qemu-system-x86_64, cloud-localds (from cloud-image-utils).
+#                virtiofsd (for --share only).
 #
 # Usage:
 #   boot-droste.sh --ssh-key ~/.ssh/id_ed25519.pub
 #   boot-droste.sh --ssh-key ~/.ssh/id.pub --persist --memory 4096
+#   boot-droste.sh --ssh-key ~/.ssh/id.pub --share ~/projects
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,6 +27,7 @@ SSH_KEY_FILE=""
 HOSTNAME="droste"
 PERSIST=false
 DAEMONIZE=false
+SHARE_DIR=""
 
 # ── Usage ───────────────────────────────────────────────────────────
 usage() {
@@ -46,6 +50,7 @@ Options:
   --ssh-port PORT  Host port for SSH forwarding (default: 2222)
   --ssh-key FILE   Path to SSH public key file (required)
   --hostname NAME  Guest hostname (default: droste)
+  --share DIR      Share a host directory via virtiofs (mounted at /mnt/share)
   --persist        Use persistent overlay (changes survive reboot)
   --daemonize      Run QEMU in background
   -h, --help       Show this help message
@@ -61,6 +66,7 @@ while [[ $# -gt 0 ]]; do
         --ssh-port)  SSH_PORT="$2"; shift 2 ;;
         --ssh-key)   SSH_KEY_FILE="$2"; shift 2 ;;
         --hostname)  HOSTNAME="$2"; shift 2 ;;
+        --share)     SHARE_DIR="$2"; shift 2 ;;
         --persist)   PERSIST=true; shift ;;
         --daemonize) DAEMONIZE=true; shift ;;
         -h|--help)   usage; exit 0 ;;
@@ -95,6 +101,19 @@ for cmd in qemu-system-x86_64 cloud-localds; do
     fi
 done
 
+if [[ -n "$SHARE_DIR" ]]; then
+    if [[ ! -d "$SHARE_DIR" ]]; then
+        echo "Error: share directory not found: $SHARE_DIR" >&2
+        exit 1
+    fi
+    if ! command -v virtiofsd &>/dev/null; then
+        echo "Error: virtiofsd not found (required for --share)." >&2
+        echo "  sudo apt install virtiofsd" >&2
+        exit 1
+    fi
+    SHARE_DIR="$(realpath "$SHARE_DIR")"
+fi
+
 # ── Work directory ──────────────────────────────────────────────────
 WORK_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/droste-boot"
 mkdir -p "$WORK_DIR"
@@ -124,18 +143,68 @@ envsubst < "$CLOUD_INIT_TEMPLATE" > "$USERDATA"
 CIDATA_ISO="${WORK_DIR}/${HOSTNAME}-cidata.iso"
 cloud-localds "$CIDATA_ISO" "$USERDATA"
 
+# ── Start virtiofsd (if --share) ──────────────────────────────────
+VIRTIOFSD_PID=""
+VIRTIOFSD_SOCK=""
+if [[ -n "$SHARE_DIR" ]]; then
+    VIRTIOFSD_SOCK="${WORK_DIR}/${HOSTNAME}-virtiofsd.sock"
+    rm -f "$VIRTIOFSD_SOCK"
+
+    virtiofsd --socket-path="$VIRTIOFSD_SOCK" \
+              --shared-dir="$SHARE_DIR" \
+              --sandbox=none &
+    VIRTIOFSD_PID=$!
+
+    # Wait for socket to appear
+    retries=20
+    while [[ ! -S "$VIRTIOFSD_SOCK" ]]; do
+        if ! kill -0 "$VIRTIOFSD_PID" 2>/dev/null; then
+            echo "Error: virtiofsd exited unexpectedly" >&2
+            exit 1
+        fi
+        ((retries--))
+        if [[ $retries -le 0 ]]; then
+            echo "Error: virtiofsd socket did not appear" >&2
+            kill "$VIRTIOFSD_PID" 2>/dev/null
+            exit 1
+        fi
+        sleep 0.1
+    done
+fi
+
+# ── Cleanup on exit ───────────────────────────────────────────────
+cleanup() {
+    if [[ -n "$VIRTIOFSD_PID" ]]; then
+        kill "$VIRTIOFSD_PID" 2>/dev/null || true
+        rm -f "$VIRTIOFSD_SOCK"
+    fi
+}
+trap cleanup EXIT
+
 # ── Build QEMU command ─────────────────────────────────────────────
 QEMU_ARGS=(
     qemu-system-x86_64
     -cpu host
     -enable-kvm
-    -m "$MEMORY"
     -smp "$CPUS"
     -drive "file=${OVERLAY},format=qcow2,if=virtio"
     -drive "file=${CIDATA_ISO},format=raw,if=virtio"
     -netdev "user,id=net0,hostfwd=tcp::${SSH_PORT}-:22"
     -device "virtio-net-pci,netdev=net0"
 )
+
+if [[ -n "$SHARE_DIR" ]]; then
+    # virtiofs requires shared memory backend
+    QEMU_ARGS+=(
+        -m "$MEMORY"
+        -object "memory-backend-memfd,id=mem,size=${MEMORY}M,share=on"
+        -numa "node,memdev=mem"
+        -chardev "socket,id=virtiofs0,path=${VIRTIOFSD_SOCK}"
+        -device "vhost-user-fs-pci,chardev=virtiofs0,tag=share"
+    )
+else
+    QEMU_ARGS+=(-m "$MEMORY")
+fi
 
 if $DAEMONIZE; then
     QEMU_ARGS+=(-display none -daemonize -pidfile "${WORK_DIR}/${HOSTNAME}.pid")
@@ -152,6 +221,10 @@ echo "  Memory:   ${MEMORY} MB"
 echo "  CPUs:     $CPUS"
 echo "  SSH:      ssh -p ${SSH_PORT} droste@localhost"
 echo "  Persist:  $PERSIST"
+if [[ -n "$SHARE_DIR" ]]; then
+    echo "  Share:    $SHARE_DIR -> /mnt/share (virtiofs)"
+    echo "  Mount:    sudo mount -t virtiofs share /mnt/share"
+fi
 echo ""
 
 exec "${QEMU_ARGS[@]}"
