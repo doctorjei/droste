@@ -1,0 +1,6 @@
+ARG BASE_IMAGE=droste-stuffer
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-stuffinator: empty cap layer on stuffer"
+
+USER droste

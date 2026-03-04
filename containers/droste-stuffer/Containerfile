@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-amimono
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-embellisher: C/C++ development toolchain (loom equivalent)"
+LABEL description="droste-stuffer: C/C++ development toolchain (loom equivalent)"
 
 USER root
 

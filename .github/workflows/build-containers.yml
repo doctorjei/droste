@@ -33,6 +33,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build and push root
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-root/Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-root:latest
+          cache-from: type=gha,scope=root
+          cache-to: type=gha,mode=max,scope=root
+
       - name: Build and push hair
         uses: docker/build-push-action@v6
         with:
@@ -40,6 +50,8 @@ jobs:
           file: containers/droste-hair/Containerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:latest
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-root:latest
           cache-from: type=gha,scope=hair
           cache-to: type=gha,mode=max,scope=hair
 
@@ -79,14 +91,26 @@ jobs:
           cache-from: type=gha,scope=amimono
           cache-to: type=gha,mode=max,scope=amimono
 
-      - name: Build and push embellisher
+      - name: Build and push stuffer
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-embellisher/
-          file: containers/droste-embellisher/Containerfile
+          context: containers/droste-stuffer/
+          file: containers/droste-stuffer/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-embellisher:latest
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffer:latest
           build-args: |
             BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-amimono:latest
-          cache-from: type=gha,scope=embellisher
-          cache-to: type=gha,mode=max,scope=embellisher
+          cache-from: type=gha,scope=stuffer
+          cache-to: type=gha,mode=max,scope=stuffer
+
+      - name: Build and push stuffinator
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/droste-stuffinator/
+          file: containers/droste-stuffinator/Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffinator:latest
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffer:latest
+          cache-from: type=gha,scope=stuffinator
+          cache-to: type=gha,mode=max,scope=stuffinator

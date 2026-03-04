@@ -4,17 +4,18 @@ packer {
       version = ">= 1.1.0"
       source  = "github.com/hashicorp/qemu"
     }
-    ansible = {
-      version = ">= 1.1.0"
-      source  = "github.com/hashicorp/ansible"
-    }
   }
 }
 
 # ── Variables ───────────────────────────────────────────────────────
-variable "base_image" {
+variable "debian_image_url" {
   type    = string
-  default = "../../output-droste-lint/droste-lint.qcow2"
+  default = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
+}
+
+variable "debian_image_checksum" {
+  type    = string
+  default = "sha512:6da628d0f44ddcc8641d5ed1c7a1b4841ccf6608810a8f7aae860db51e9975e76b3c230728560337b615f8b610a34a760cf9d18e8ddb55c48608a06724ea0892"
 }
 
 variable "disk_size" {
@@ -33,14 +34,13 @@ variable "cpus" {
 }
 
 # ── Source ──────────────────────────────────────────────────────────
-source "qemu" "droste-thread" {
-  vm_name          = "droste-thread.qcow2"
-  disk_image       = true
-  use_backing_file = true
-  iso_url          = var.base_image
-  iso_checksum     = "none"
-  disk_size        = var.disk_size
-  format           = "qcow2"
+source "qemu" "droste-lint" {
+  vm_name      = "droste-lint.qcow2"
+  disk_image   = true
+  iso_url      = var.debian_image_url
+  iso_checksum = var.debian_image_checksum
+  disk_size    = var.disk_size
+  format       = "qcow2"
 
   accelerator  = "kvm"
   cpus         = var.cpus
@@ -77,7 +77,7 @@ source "qemu" "droste-thread" {
 
   shutdown_command = "sudo shutdown -P now"
 
-  output_directory = "../../output-droste-thread"
+  output_directory = "../../output-droste-lint"
 
   qemuargs = [
     ["-cpu", "host"],
@@ -85,28 +85,10 @@ source "qemu" "droste-thread" {
 }
 
 # ── Build ───────────────────────────────────────────────────────────
+# Lint is genericcloud with the droste user baked in — nothing else.
+# Cloud-init creates the user at boot; we just clean up and compress.
 build {
-  sources = ["source.qemu.droste-thread"]
-
-  # OpenSSH 9.0+ changed scp to use SFTP mode by default, which breaks
-  # Packer's SSH proxy adapter. The -O flag forces legacy SCP mode.
-  # See: https://github.com/hashicorp/packer-plugin-ansible/issues/100
-  provisioner "ansible" {
-    playbook_file = "../../ansible/droste-thread.yml"
-    user          = "droste"
-    ansible_env_vars = [
-      "ANSIBLE_HOST_KEY_CHECKING=False",
-      "ANSIBLE_DISPLAY_SKIPPED_HOSTS=false",
-      "ANSIBLE_SCP_EXTRA_ARGS=-O",
-      "COWPATH=${abspath("${path.root}/../../ansible/files")}",
-      "ANSIBLE_COW_SELECTION=droste",
-      "ANSIBLE_COW_ACCEPTLIST=droste",
-      "PERL_UNICODE=SDA",
-    ]
-    extra_arguments = [
-      "--become",
-    ]
-  }
+  sources = ["source.qemu.droste-lint"]
 
   # ── Cleanup ──────────────────────────────────────────────────────
   provisioner "file" {
@@ -120,13 +102,8 @@ build {
 
   post-processor "shell-local" {
     inline = [
-      # Diff image: create with real backing path, then rebase to bare filename for portability
-      "qemu-img convert -O qcow2 -c -B ../output-droste-lint/droste-lint.qcow2 -F qcow2 ../../output-droste-thread/droste-thread.qcow2 ../../output-droste-thread/droste-thread-diff.qcow2",
-      "qemu-img rebase -u -b droste-lint.qcow2 -F qcow2 ../../output-droste-thread/droste-thread-diff.qcow2",
-      # Standalone image: flatten overlay into self-contained image
-      "qemu-img convert -O qcow2 -c ../../output-droste-thread/droste-thread.qcow2 ../../output-droste-thread/droste-thread-standalone.qcow2",
-      # Replace raw overlay with standalone
-      "mv ../../output-droste-thread/droste-thread-standalone.qcow2 ../../output-droste-thread/droste-thread.qcow2",
+      "qemu-img convert -O qcow2 -c ../../output-droste-lint/droste-lint.qcow2 ../../output-droste-lint/droste-lint-compressed.qcow2",
+      "mv ../../output-droste-lint/droste-lint-compressed.qcow2 ../../output-droste-lint/droste-lint.qcow2",
     ]
   }
 }
