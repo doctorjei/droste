@@ -35,8 +35,9 @@ variable "cpus" {
 # ── Source ──────────────────────────────────────────────────────────
 source "qemu" "droste-tapestry" {
   vm_name      = "droste-tapestry.qcow2"
-  disk_image   = true
-  iso_url      = var.base_image
+  disk_image       = true
+  use_backing_file = true
+  iso_url          = var.base_image
   iso_checksum = "none"
   disk_size    = var.disk_size
   format       = "qcow2"
@@ -129,10 +130,17 @@ build {
     inline = ["sudo bash /tmp/cleanup-image.sh"]
   }
 
+  # use_backing_file produces an overlay on fabric (only changed blocks).
+  # Produce both a standalone image and a portable diff.
   post-processor "shell-local" {
     inline = [
-      "qemu-img convert -O qcow2 -c ../../output-droste-tapestry/droste-tapestry.qcow2 ../../output-droste-tapestry/droste-tapestry-compressed.qcow2",
-      "mv ../../output-droste-tapestry/droste-tapestry-compressed.qcow2 ../../output-droste-tapestry/droste-tapestry.qcow2",
+      # Diff image: create with real backing path, then rebase to bare filename for portability
+      "qemu-img convert -O qcow2 -c -B ../output-droste-fabric/droste-fabric.qcow2 -F qcow2 ../../output-droste-tapestry/droste-tapestry.qcow2 ../../output-droste-tapestry/droste-tapestry-diff.qcow2",
+      "qemu-img rebase -u -b droste-fabric.qcow2 -F qcow2 ../../output-droste-tapestry/droste-tapestry-diff.qcow2",
+      # Standalone image: flatten overlay into self-contained image
+      "qemu-img convert -O qcow2 -c ../../output-droste-tapestry/droste-tapestry.qcow2 ../../output-droste-tapestry/droste-tapestry-standalone.qcow2",
+      # Replace raw overlay with standalone
+      "mv ../../output-droste-tapestry/droste-tapestry-standalone.qcow2 ../../output-droste-tapestry/droste-tapestry.qcow2",
     ]
   }
 }

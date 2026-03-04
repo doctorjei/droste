@@ -195,6 +195,7 @@ do_build_yarn() {
     echo ""
     echo "Build complete."
     ls -lh "$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2"
+    ls -lh "$PROJECT_DIR/output-droste-yarn/droste-yarn-diff.qcow2"
     echo ""
     do_test yarn
 }
@@ -211,6 +212,7 @@ do_build_fabric() {
     echo ""
     echo "Build complete."
     ls -lh "$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2"
+    ls -lh "$PROJECT_DIR/output-droste-fabric/droste-fabric-diff.qcow2"
     echo ""
     do_test fabric
 }
@@ -227,6 +229,7 @@ do_build_tapestry() {
     echo ""
     echo "Build complete."
     ls -lh "$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2"
+    ls -lh "$PROJECT_DIR/output-droste-tapestry/droste-tapestry-diff.qcow2"
     echo ""
     do_test tapestry
 }
@@ -243,6 +246,7 @@ do_build_loom() {
     echo ""
     echo "Build complete."
     ls -lh "$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
+    ls -lh "$PROJECT_DIR/output-droste-loom/droste-loom-diff.qcow2"
     echo ""
     do_test loom
 }
