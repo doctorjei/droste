@@ -40,18 +40,21 @@ Images (VM):
   all        All tiers
 
 Images (container):
+  root       OCI seed base (unified base)
   hair       Container base (thread equivalent)
   wool       VM tooling layer (yarn equivalent)
   felt       HA/cluster layer (fabric equivalent)
   amimono    Testing/security layer (tapestry equivalent)
-  embellisher Dev toolchain (loom equivalent)
+  stuffer     Dev toolchain (loom equivalent)
+  stuffinator Empty cap layer on stuffer
 
 Images (LXC):
   fiber      LXC base (thread equivalent)
   sheet      VM tooling layer (yarn equivalent)
   page       HA/cluster layer (fabric equivalent)
   tome       Testing/security layer (tapestry equivalent)
-  gutenberg  Dev toolchain (loom equivalent)
+  press      Dev toolchain (loom equivalent)
+  gutenberg  Empty cap layer on press
 
 Bare tier names are auto-detected — no overlap between VM, container, and LXC names.
 
@@ -316,10 +319,10 @@ resolve_tiers() {
 }
 
 # ── Container support ────────────────────────────────────────────────
-ALL_CONTAINER_TIERS=(hair wool felt amimono embellisher)
+ALL_CONTAINER_TIERS=(root hair wool felt amimono stuffer stuffinator)
 
 is_container_tier() {
-    case "$1" in hair|wool|felt|amimono|embellisher) return 0 ;; *) return 1 ;; esac
+    case "$1" in root|hair|wool|felt|amimono|stuffer|stuffinator) return 0 ;; *) return 1 ;; esac
 }
 
 detect_container_cmd() {
@@ -393,10 +396,27 @@ do_build_container() {
     local container_cmd
     container_cmd=$(detect_container_cmd)
 
+    # Map tier → parent image for BASE_IMAGE arg
+    local parent=""
+    case "$tier" in
+        hair)        parent="root" ;;
+        wool)        parent="hair" ;;
+        felt)        parent="wool" ;;
+        amimono)     parent="felt" ;;
+        stuffer)     parent="amimono" ;;
+        stuffinator) parent="stuffer" ;;
+    esac
+
     echo "Building droste-${tier} container..."
     echo ""
 
+    local build_args=()
+    if [[ -n "$parent" ]]; then
+        build_args+=(--build-arg "BASE_IMAGE=localhost/droste-${parent}")
+    fi
+
     $container_cmd build \
+        "${build_args[@]}" \
         -t "droste-${tier}" \
         -f "$PROJECT_DIR/containers/droste-${tier}/Containerfile" \
         "$PROJECT_DIR"
@@ -440,22 +460,36 @@ resolve_container_tiers() {
 }
 
 # ── LXC support ──────────────────────────────────────────────────────
-ALL_LXC_TIERS=(fiber sheet page tome gutenberg)
+ALL_LXC_TIERS=(fiber sheet page tome press gutenberg)
 
 is_lxc_tier() {
-    case "$1" in fiber|sheet|page|tome|gutenberg) return 0 ;; *) return 1 ;; esac
+    case "$1" in fiber|sheet|page|tome|press|gutenberg) return 0 ;; *) return 1 ;; esac
 }
 
 do_test_lxc() {
     local tier="$1"
-    local tarball="$PROJECT_DIR/output/droste-${tier}.tar.gz"
     local checkfile="$PROJECT_DIR/checks/${tier}.checks"
 
-    if [[ ! -f "$tarball" ]]; then
-        echo "Error: tarball not found: $tarball" >&2
-        echo "Run '$(basename "$0") lxc build $tier' first." >&2
-        exit 1
-    fi
+    # Layer chain: seed is always base, then each tier up to the target
+    local -A tier_chain
+    tier_chain[fiber]="seed"
+    tier_chain[sheet]="seed fiber"
+    tier_chain[page]="seed fiber sheet"
+    tier_chain[tome]="seed fiber sheet page"
+    tier_chain[press]="seed fiber sheet page tome"
+    tier_chain[gutenberg]="seed fiber sheet page tome press"
+
+    local layers="${tier_chain[$tier]:-} $tier"
+
+    # Verify all layer tarballs exist
+    for layer in $layers; do
+        local tarball="$PROJECT_DIR/output/droste-${layer}.tar.xz"
+        if [[ ! -f "$tarball" ]]; then
+            echo "Error: tarball not found: $tarball" >&2
+            echo "Run '$(basename "$0") lxc build $layer' first." >&2
+            exit 1
+        fi
+    done
 
     if [[ ! -f "$checkfile" ]]; then
         echo "Warning: no check file found: $checkfile" >&2
@@ -468,7 +502,13 @@ do_test_lxc() {
 
     local test_dir
     test_dir=$(mktemp -d "/tmp/droste-test-${tier}.XXXXXX")
-    tar -xf "$tarball" -C "$test_dir"
+
+    # Stack all layers: seed first, then each overlay in order
+    # Overlay tarballs contain whiteout devices (char 0:0) for deleted files;
+    # these fail with mknod errors when flattening — harmless for smoke tests.
+    for layer in $layers; do
+        tar -xf "$PROJECT_DIR/output/droste-${layer}.tar.xz" -C "$test_dir" 2>/dev/null || true
+    done
 
     local pass=0 fail=0 errors=()
 
@@ -523,7 +563,7 @@ resolve_lxc_chain() {
     local chain=()
     local need_build=false
     for tier in "${ALL_LXC_TIERS[@]}"; do
-        if [[ ! -f "$PROJECT_DIR/output/droste-${tier}.tar.gz" ]]; then
+        if [[ ! -f "$PROJECT_DIR/output/droste-${tier}.tar.xz" ]]; then
             need_build=true
         fi
         if [[ "$need_build" == true ]]; then
@@ -556,12 +596,12 @@ do_lxc_command() {
     if [[ $# -gt 0 ]]; then
         case "$1" in
             build|test|all) sub_cmd="$1"; shift ;;
-            fiber|sheet|page|tome|gutenberg) lxc_image="$1"; shift ;;
+            fiber|sheet|page|tome|press|gutenberg) lxc_image="$1"; shift ;;
         esac
     fi
     if [[ $# -gt 0 ]]; then
         case "$1" in
-            fiber|sheet|page|tome|gutenberg|all) lxc_image="$1"; shift ;;
+            fiber|sheet|page|tome|press|gutenberg|all) lxc_image="$1"; shift ;;
         esac
     fi
     while [[ $# -gt 0 ]]; do
@@ -597,12 +637,12 @@ do_container_command() {
     if [[ $# -gt 0 ]]; then
         case "$1" in
             build|test|all) sub_cmd="$1"; shift ;;
-            hair|wool|felt|amimono|embellisher) container_image="$1"; shift ;;
+            root|hair|wool|felt|amimono|stuffer|stuffinator) container_image="$1"; shift ;;
         esac
     fi
     if [[ $# -gt 0 ]]; then
         case "$1" in
-            hair|wool|felt|amimono|embellisher|all) container_image="$1"; shift ;;
+            root|hair|wool|felt|amimono|stuffer|stuffinator|all) container_image="$1"; shift ;;
         esac
     fi
     while [[ $# -gt 0 ]]; do
@@ -741,11 +781,11 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
-        fiber|sheet|page|tome|gutenberg)
+        fiber|sheet|page|tome|press|gutenberg)
             IMAGE="$1"
             shift
             ;;
-        hair|wool|felt|amimono|embellisher)
+        hair|wool|felt|amimono|stuffer|stuffinator)
             IMAGE="$1"
             shift
             ;;
@@ -763,11 +803,11 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
-        fiber|sheet|page|tome|gutenberg)
+        fiber|sheet|page|tome|press|gutenberg)
             IMAGE="$1"
             shift
             ;;
-        hair|wool|felt|amimono|embellisher)
+        hair|wool|felt|amimono|stuffer|stuffinator)
             IMAGE="$1"
             shift
             ;;
