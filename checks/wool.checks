@@ -1,0 +1,29 @@
+# Image tools
+qemu-img available	qemu-img --version
+cloud-localds available	cloud-localds --help
+ansible available	ansible --version
+envsubst available	envsubst --version
+mksquashfs available	command -v mksquashfs
+
+# Filesystem tools
+gdisk available	command -v gdisk
+parted available	parted --version
+mkfs.btrfs available	command -v mkfs.btrfs
+cryptsetup available	command -v cryptsetup
+mdadm available	command -v mdadm
+mkfs.fat available	command -v mkfs.fat
+mount.ntfs available	command -v mount.ntfs-3g
+mtools available	command -v mtools
+ncdu available	ncdu -v
+
+# Network diagnostics
+hping3 available	command -v hping3
+bmon available	command -v bmon
+nethogs available	command -v nethogs
+nicstat available	command -v nicstat
+ethtool available	command -v ethtool
+
+# Hardware/benchmarking
+lshw available	lshw -version
+sysbench available	sysbench --version
+picocom available	picocom --help

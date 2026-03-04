@@ -1,0 +1,21 @@
+# Pacemaker/HA
+crm_mon available	crm_mon --version
+pcs available	command -v pcs
+resource agents installed	test -d /usr/lib/ocf/resource.d
+keepalived available	command -v keepalived
+
+# Cluster
+clush available	clush --version
+
+# Storage
+ceph available	ceph --version
+rbd available	rbd --version
+
+# Networking
+ebtables available	command -v ebtables
+
+# Fencing
+fence-agents-common installed	dpkg -s fence-agents-common >/dev/null 2>&1
+
+# PXE
+pxelinux.0 exists	test -f /usr/lib/PXELINUX/pxelinux.0

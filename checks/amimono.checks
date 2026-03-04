@@ -1,0 +1,46 @@
+# Virtual networking
+ovs-vsctl available	command -v ovs-vsctl
+
+# Packet analysis
+tshark available	command -v tshark
+tcpreplay available	command -v tcpreplay
+
+# Network scanning
+nmap available	command -v nmap
+arp-scan available	command -v arp-scan
+
+# Load balancing
+haproxy available	command -v haproxy
+
+# Hardware management
+ipmitool available	command -v ipmitool
+
+# Benchmarking
+fio available	command -v fio
+stress-ng available	command -v stress-ng
+ab available	command -v ab
+iperf3 available	command -v iperf3
+
+# Disk/storage tools
+blktrace available	command -v blktrace
+xorriso available	command -v xorriso
+
+# Routing
+bird available	command -v bird
+
+# Container ecosystem
+buildah available	command -v buildah
+skopeo available	command -v skopeo
+
+# Observability
+prometheus-node-exporter available	command -v prometheus-node-exporter
+lnav available	command -v lnav
+
+# Database clients
+psql available	command -v psql
+redis-cli available	command -v redis-cli
+
+# Security
+lynis available	command -v lynis
+aide available	command -v aide
+auditctl available	command -v auditctl
