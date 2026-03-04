@@ -33,8 +33,6 @@ build {
       "COWPATH=${abspath("${path.root}/../../ansible/files")}",
       "ANSIBLE_COW_SELECTION=droste",
       "ANSIBLE_COW_ACCEPTLIST=droste",
-      "PYTHONIOENCODING=utf-8",
-      "LC_ALL=C.UTF-8",
     ]
     inline = [
       "ansible-playbook ${abspath("${path.root}/test-run-playbook.yml")}",

@@ -11,6 +11,19 @@ scripts/drostify all jacquard          # build prerequisites + jacquard
 
 Requires KVM and Packer. Each tier auto-builds its prerequisites if missing.
 
+## Default Credentials
+
+| Field | Value |
+|-------|-------|
+| Username | `droste` |
+| Password | `droste` |
+| UID/GID | 1000 |
+| Sudo | passwordless (NOPASSWD) |
+| SSH | key + password auth enabled |
+
+**These images are for isolated lab/test environments only.** Change the
+password or disable password auth before exposing to any untrusted network.
+
 ## Testing
 
 **SSH smoke tests** run after boot, verifying the current tier's packages are present:
