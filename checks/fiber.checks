@@ -18,8 +18,8 @@ dnsmasq available	test -x /usr/sbin/dnsmasq
 nftables available	sudo nft --version
 ipcalc available	ipcalc --version
 ipvsadm available	test -x /usr/sbin/ipvsadm
-IPv4 forwarding enabled	test $(cat /proc/sys/net/ipv4/ip_forward) -eq 1
-IPv6 forwarding enabled	test $(cat /proc/sys/net/ipv6/conf/all/forwarding) -eq 1
+IPv4 forwarding configured	grep -q 'net.ipv4.ip_forward = 1' /etc/sysctl.d/99-droste.conf
+IPv6 forwarding configured	grep -q 'net.ipv6.conf.all.forwarding = 1' /etc/sysctl.d/99-droste.conf
 
 # Utilities
 curl available	curl --version

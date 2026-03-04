@@ -225,8 +225,22 @@ xargs apt-mark manual < /tmp/seed-keep.txt 2>/dev/null || true
 dpkg-divert --local --rename --add /etc/kernel/postrm.d/zz-update-grub 2>/dev/null || true
 rm -f /etc/kernel/postrm.d/zz-update-grub
 
+# Filter purge list to only installed packages (avoids "not installed" noise)
+echo "Filtering purge list to installed packages..."
+while read -r pkg; do
+    if dpkg -s "$pkg" &>/dev/null; then
+        echo "$pkg"
+    fi
+done < /tmp/purge-list.txt > /tmp/purge-installed.txt
+
+# Remove dirs that cause "not empty" warnings during purge
+rm -rf /etc/grub.d /etc/default/grub.d /etc/kernel/postrm.d
+
 echo "Purging kernel/boot/container-irrelevant packages..."
-xargs apt-get purge -y --allow-remove-essential < /tmp/purge-list.txt || true
+if [[ -s /tmp/purge-installed.txt ]]; then
+    xargs apt-get purge -y --allow-remove-essential < /tmp/purge-installed.txt 2>&1 \
+        | grep -v 'dpkg: warning: this is a protected package'
+fi
 
 echo "Running autoremove..."
 apt-get autoremove -y || true
