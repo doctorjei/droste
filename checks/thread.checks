@@ -1,6 +1,6 @@
 # User
-agent user exists with UID 1000	test "$(id -u agent)" -eq 1000
-agent group	id -gn agent | grep -q agent
+droste user exists with UID 1000	test "$(id -u droste)" -eq 1000
+droste group	id -gn droste | grep -q droste
 passwordless sudo	sudo -n true
 
 # Containers
@@ -92,11 +92,11 @@ httpd available	command -v httpd
 # System
 sshd running	sudo systemctl is-active ssh
 root login disabled	grep -q '^PermitRootLogin no' /etc/ssh/sshd_config
-password auth disabled	grep -q '^PasswordAuthentication no' /etc/ssh/sshd_config
+password auth enabled	grep -q '^PasswordAuthentication yes' /etc/ssh/sshd_config
 machine-id populated (cloud-init ran)	test -s /etc/machine-id
 qemu-guest-agent available	test -x /usr/sbin/qemu-ga
 
 # Rootless Podman
-subuid configured	grep -q '^agent:' /etc/subuid
-subgid configured	grep -q '^agent:' /etc/subgid
-storage.conf exists	test -f /home/agent/.config/containers/storage.conf
+subuid configured	grep -q '^droste:' /etc/subuid
+subgid configured	grep -q '^droste:' /etc/subgid
+storage.conf exists	test -f /home/droste/.config/containers/storage.conf

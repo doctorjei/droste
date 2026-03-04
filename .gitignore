@@ -1,5 +1,9 @@
 # Build artifacts (QCOW2 images)
 output-droste-*/
 
+# LXC build artifacts
+output/
+download/
+
 # Vault secrets
 vault/share-rw/

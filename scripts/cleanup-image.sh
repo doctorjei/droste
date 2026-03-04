@@ -26,8 +26,8 @@ rm -rf /var/lib/apt/lists/*
 : > /etc/machine-id
 chmod 0444 /etc/machine-id
 
-# Re-harden SSH (disable password auth after Packer build)
-sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+# Ensure SSH password auth stays enabled
+sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 # Truncate all logs
 find /var/log -type f -exec truncate -s 0 {} +

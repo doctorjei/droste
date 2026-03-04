@@ -65,7 +65,7 @@ echo "Waiting for SSH..."
 retries=30
 while ! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
           -o LogLevel=ERROR -o ConnectTimeout=2 \
-          -p "$SSH_PORT" -i "$PRIVATE_KEY" agent@localhost true &>/dev/null; do
+          -p "$SSH_PORT" -i "$PRIVATE_KEY" droste@localhost true &>/dev/null; do
     ((retries--))
     if [[ $retries -le 0 ]]; then
         echo "Error: SSH did not become available" >&2
@@ -80,25 +80,25 @@ echo ""
 SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -p "$SSH_PORT" -i "$PRIVATE_KEY")
 
 echo "Disabling PVE enterprise repo (requires subscription)..."
-ssh "${SSH_OPTS[@]}" agent@localhost "sudo rm -f /etc/apt/sources.list.d/pve-enterprise.list"
+ssh "${SSH_OPTS[@]}" droste@localhost "sudo rm -f /etc/apt/sources.list.d/pve-enterprise.list"
 
 echo "Installing zfsutils-linux..."
-ssh "${SSH_OPTS[@]}" agent@localhost "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends zfsutils-linux 2>&1 | tail -5"
+ssh "${SSH_OPTS[@]}" droste@localhost "sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends zfsutils-linux 2>&1 | tail -5"
 echo ""
 
 echo "Checking ZFS:"
-ssh "${SSH_OPTS[@]}" agent@localhost "command -v zpool || test -x /usr/sbin/zpool && echo '  + zpool found'" || echo "  - zpool not found"
-ssh "${SSH_OPTS[@]}" agent@localhost "command -v zfs || test -x /usr/sbin/zfs && echo '  + zfs found'" || echo "  - zfs not found"
+ssh "${SSH_OPTS[@]}" droste@localhost "command -v zpool || test -x /usr/sbin/zpool && echo '  + zpool found'" || echo "  - zpool not found"
+ssh "${SSH_OPTS[@]}" droste@localhost "command -v zfs || test -x /usr/sbin/zfs && echo '  + zfs found'" || echo "  - zfs not found"
 echo ""
 
 # ── Cleanup inside guest ─────────────────────────────────────────────
 echo "Cleaning up guest..."
-ssh "${SSH_OPTS[@]}" agent@localhost "sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*"
+ssh "${SSH_OPTS[@]}" droste@localhost "sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*"
 echo ""
 
 # ── Shutdown ─────────────────────────────────────────────────────────
 echo "Shutting down..."
-ssh "${SSH_OPTS[@]}" agent@localhost "sudo shutdown -P now" 2>/dev/null || true
+ssh "${SSH_OPTS[@]}" droste@localhost "sudo shutdown -P now" 2>/dev/null || true
 sleep 5
 
 # Kill QEMU if still running

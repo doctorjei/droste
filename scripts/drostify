@@ -27,6 +27,7 @@ Commands:
   all        Prereqs + build + test (default)
   vm         Build/test VM images (explicit prefix)
   container  Build/test container images (podman/docker)
+  lxc        Build/test LXC rootfs images (chroot + systemd-nspawn)
   help       Show this help message
 
 Images (VM):
@@ -45,7 +46,14 @@ Images (container):
   tome       Testing/security layer (tapestry equivalent)
   gutenberg  Dev toolchain (loom equivalent)
 
-Bare tier names are auto-detected — no overlap between VM and container names.
+Images (LXC):
+  hair       LXC base (thread equivalent)
+  wool       VM tooling layer (yarn equivalent)
+  felt       HA/cluster layer (fabric equivalent)
+  amimono    Testing/security layer (tapestry equivalent)
+  embellisher Dev toolchain (loom equivalent)
+
+Bare tier names are auto-detected — no overlap between VM, container, and LXC names.
 
 Options:
   --force          Overwrite existing images (required for 'build all')
@@ -66,6 +74,9 @@ Examples:
   $(basename "$0") container build fiber    # explicit container prefix
   $(basename "$0") container test sheet     # explicit container prefix
   $(basename "$0") container build all      # build all containers
+  $(basename "$0") lxc build hair           # build hair LXC rootfs
+  $(basename "$0") lxc test hair            # test hair LXC rootfs
+  $(basename "$0") build hair               # build hair (auto-detected as LXC)
 EOF
 }
 
@@ -126,7 +137,7 @@ do_test() {
     local retries=30
     while ! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
               -o LogLevel=ERROR -o ConnectTimeout=2 \
-              -p "$SSH_PORT" -i "$private_key" agent@localhost true &>/dev/null; do
+              -p "$SSH_PORT" -i "$private_key" droste@localhost true &>/dev/null; do
         ((retries--))
         if [[ $retries -le 0 ]]; then
             echo "Error: SSH did not become available" >&2
@@ -424,6 +435,154 @@ resolve_container_tiers() {
     fi
 }
 
+# ── LXC support ──────────────────────────────────────────────────────
+ALL_LXC_TIERS=(hair wool felt amimono embellisher)
+
+is_lxc_tier() {
+    case "$1" in hair|wool|felt|amimono|embellisher) return 0 ;; *) return 1 ;; esac
+}
+
+do_test_lxc() {
+    local tier="$1"
+    local tarball="$PROJECT_DIR/output/droste-${tier}.tar.gz"
+    local checkfile="$PROJECT_DIR/checks/${tier}.checks"
+
+    if [[ ! -f "$tarball" ]]; then
+        echo "Error: tarball not found: $tarball" >&2
+        echo "Run '$(basename "$0") lxc build $tier' first." >&2
+        exit 1
+    fi
+
+    if [[ ! -f "$checkfile" ]]; then
+        echo "Warning: no check file found: $checkfile" >&2
+        return 0
+    fi
+
+    echo "droste-${tier} LXC test"
+    echo "======================"
+    echo ""
+
+    local test_dir
+    test_dir=$(mktemp -d "/tmp/droste-test-${tier}.XXXXXX")
+    tar -xf "$tarball" -C "$test_dir"
+
+    local pass=0 fail=0 errors=()
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        if [[ "$line" =~ ^#\  ]]; then
+            echo "${line#\# }:"
+            continue
+        fi
+        IFS=$'\t' read -r desc cmd flag <<< "$line"
+        if systemd-nspawn -D "$test_dir" --quiet --pipe --register=no \
+            bash -c "$cmd" &>/dev/null; then
+            echo "  + $desc"
+            pass=$((pass + 1))
+        else
+            echo "  - FAIL: $desc"
+            errors+=("$desc")
+            fail=$((fail + 1))
+        fi
+    done < "$checkfile"
+
+    rm -rf "$test_dir"
+
+    echo ""
+    echo "================================"
+    echo "Results: ${pass} passed, ${fail} failed"
+
+    if [[ ${fail} -gt 0 ]]; then
+        echo ""
+        echo "Failures:"
+        for err in "${errors[@]}"; do
+            echo "  - $err"
+        done
+        return 1
+    fi
+}
+
+do_build_lxc() {
+    local tier="$1"
+
+    echo "Building droste-${tier} LXC rootfs..."
+    echo ""
+
+    "$PROJECT_DIR/lxc/build-rootfs.sh" "$tier"
+
+    echo ""
+    do_test_lxc "$tier"
+}
+
+resolve_lxc_chain() {
+    local target="$1"
+    local chain=()
+    local need_build=false
+    for tier in "${ALL_LXC_TIERS[@]}"; do
+        if [[ ! -f "$PROJECT_DIR/output/droste-${tier}.tar.gz" ]]; then
+            need_build=true
+        fi
+        if [[ "$need_build" == true ]]; then
+            chain+=("$tier")
+        fi
+        [[ "$tier" == "$target" ]] && break
+    done
+    if [[ ${#chain[@]} -eq 0 ]]; then
+        chain=("$target")
+    fi
+    echo "${chain[@]}"
+}
+
+resolve_lxc_tiers() {
+    local target="$1"
+    if [[ "$target" == "all" ]]; then
+        echo "${ALL_LXC_TIERS[@]}"
+    else
+        resolve_lxc_chain "$target"
+    fi
+}
+
+# ── LXC command handler ──────────────────────────────────────────────
+do_lxc_command() {
+    local sub_cmd="all"
+    local lxc_image="hair"
+    local force=false
+
+    # Parse: lxc [build|test|all] [tier] [--force]
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            build|test|all) sub_cmd="$1"; shift ;;
+            hair|wool|felt|amimono|embellisher) lxc_image="$1"; shift ;;
+        esac
+    fi
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            hair|wool|felt|amimono|embellisher|all) lxc_image="$1"; shift ;;
+        esac
+    fi
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force) force=true; shift ;;
+            *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+        esac
+    done
+
+    case "$sub_cmd" in
+        build|all)
+            for tier in $(resolve_lxc_tiers "$lxc_image"); do
+                echo ""
+                do_build_lxc "$tier"
+            done
+            ;;
+        test)
+            for tier in $(resolve_lxc_tiers "$lxc_image"); do
+                echo ""
+                do_test_lxc "$tier"
+            done
+            ;;
+    esac
+}
+
 # ── Container command handler (self-contained, no SSH needed) ────────
 do_container_command() {
     local sub_cmd="all"
@@ -560,6 +719,11 @@ if [[ $# -gt 0 ]]; then
             do_container_command "$@"
             exit 0
             ;;
+        lxc)
+            shift
+            do_lxc_command "$@"
+            exit 0
+            ;;
         vm)
             shift
             do_vm_command "$@"
@@ -574,6 +738,10 @@ if [[ $# -gt 0 ]]; then
             shift
             ;;
         fiber|sheet|page|tome|gutenberg)
+            IMAGE="$1"
+            shift
+            ;;
+        hair|wool|felt|amimono|embellisher)
             IMAGE="$1"
             shift
             ;;
@@ -595,6 +763,10 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
+        hair|wool|felt|amimono|embellisher)
+            IMAGE="$1"
+            shift
+            ;;
     esac
 fi
 
@@ -608,8 +780,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Auto-detect SSH key if not provided (skip for container tiers)
-if ! is_container_tier "$IMAGE"; then
+# Auto-detect SSH key if not provided (skip for container and LXC tiers)
+if ! is_container_tier "$IMAGE" && ! is_lxc_tier "$IMAGE"; then
     if [[ -z "$SSH_KEY" ]]; then
         for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
             if [[ -f "$candidate" ]]; then
@@ -648,7 +820,12 @@ check_existing_images() {
 # ── Main ────────────────────────────────────────────────────────────
 case "$COMMAND" in
     all)
-        if is_container_tier "$IMAGE"; then
+        if is_lxc_tier "$IMAGE"; then
+            for tier in $(resolve_lxc_tiers "$IMAGE"); do
+                echo ""
+                do_build_lxc "$tier"
+            done
+        elif is_container_tier "$IMAGE"; then
             for tier in $(resolve_container_tiers "$IMAGE"); do
                 echo ""
                 do_build_container "$tier"
@@ -668,7 +845,12 @@ case "$COMMAND" in
         do_prereqs
         ;;
     build)
-        if is_container_tier "$IMAGE"; then
+        if is_lxc_tier "$IMAGE"; then
+            for tier in $(resolve_lxc_tiers "$IMAGE"); do
+                echo ""
+                do_build_lxc "$tier"
+            done
+        elif is_container_tier "$IMAGE"; then
             for tier in $(resolve_container_tiers "$IMAGE"); do
                 echo ""
                 do_build_container "$tier"
@@ -684,7 +866,12 @@ case "$COMMAND" in
         fi
         ;;
     test)
-        if is_container_tier "$IMAGE"; then
+        if is_lxc_tier "$IMAGE"; then
+            for tier in $(resolve_lxc_tiers "$IMAGE"); do
+                echo ""
+                do_test_lxc "$tier"
+            done
+        elif is_container_tier "$IMAGE"; then
             for tier in $(resolve_container_tiers "$IMAGE"); do
                 echo ""
                 do_test_container "$tier"

@@ -41,7 +41,6 @@ psql available	command -v psql
 redis-cli available	command -v redis-cli
 
 # Security
-fail2ban-client available	command -v fail2ban-client
 lynis available	test -x /usr/sbin/lynis
 aide available	command -v aide
 auditctl available	test -x /usr/sbin/auditctl

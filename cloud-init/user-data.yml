@@ -5,7 +5,7 @@
 # via envsubst before being passed to the VM.
 #
 # Required variables:
-#   SSH_PUBLIC_KEY    — public SSH key for the agent user
+#   SSH_PUBLIC_KEY    — public SSH key for the droste user
 #
 # Optional variables:
 #   DROSTE_HOSTNAME   — VM hostname (default: droste)
@@ -14,10 +14,14 @@ hostname: ${DROSTE_HOSTNAME:-droste}
 manage_etc_hosts: true
 
 users:
-  - name: agent
+  - name: droste
     uid: "1000"
     groups: sudo
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    plain_text_passwd: droste
     ssh_authorized_keys:
       - "${SSH_PUBLIC_KEY}"
+
+ssh_pwauth: true

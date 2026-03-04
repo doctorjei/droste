@@ -49,27 +49,27 @@ source "qemu" "droste-loom" {
   vnc_port_min = 5900
   vnc_port_max = 5999
 
-  # Bootstrap cloud-init: re-enable password auth so Packer can SSH in.
-  # The playbook re-hardens SSH before shutdown.
+  # Bootstrap cloud-init: create droste user with password so Packer
+  # can SSH in. The final image keeps password auth enabled.
   cd_content = {
     "meta-data" = ""
     "user-data" = <<-EOF
       #cloud-config
       users:
-        - name: agent
+        - name: droste
           uid: "1000"
           groups: sudo
           shell: /bin/bash
           sudo: ALL=(ALL) NOPASSWD:ALL
           lock_passwd: false
-          plain_text_passwd: packer
+          plain_text_passwd: droste
       ssh_pwauth: true
     EOF
   }
   cd_label = "cidata"
 
-  ssh_username = "agent"
-  ssh_password = "packer"
+  ssh_username = "droste"
+  ssh_password = "droste"
   ssh_timeout  = "10m"
 
   boot_wait = "30s"
@@ -89,7 +89,7 @@ build {
 
   provisioner "ansible" {
     playbook_file = "../../ansible/droste-loom.yml"
-    user          = "agent"
+    user          = "droste"
     ansible_env_vars = [
       "ANSIBLE_HOST_KEY_CHECKING=False",
       "ANSIBLE_DISPLAY_SKIPPED_HOSTS=false",

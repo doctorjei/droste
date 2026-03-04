@@ -17,7 +17,7 @@ Each tier builds on the previous one, adding tools for progressively more comple
 
 Pick the smallest tier that has what you need. Most container and networking work only needs **thread**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric**.
 
-Each image includes an `agent` user (UID 1000) with passwordless sudo and key-only SSH. See [BUILDING.md](BUILDING.md) for build and test instructions.
+Each image includes a `droste` user (UID 1000, password `droste`) with passwordless sudo. SSH accepts both key and password auth. See [BUILDING.md](BUILDING.md) for build and test instructions.
 
 ## droste-thread: Basic Tools & Container Tools
 *(based on debian-13-genericcloud)*
@@ -81,7 +81,7 @@ Each image includes an `agent` user (UID 1000) with passwordless sudo and key-on
 
 **Networking**: ```arp-scan, bird2, haproxy, nmap, openvswitch-switch, tcpreplay```
 
-**Security**: ```aide, apparmor-utils, auditd, fail2ban, lynis```
+**Security**: ```aide, apparmor-utils, auditd, lynis```
 
 **Storage**: ```blktrace, sg3-utils, smartmontools, xorriso```
 

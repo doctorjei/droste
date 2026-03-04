@@ -80,24 +80,25 @@ RUN chmod 755 /usr/local/bin/pystrings /usr/local/bin/pyhttpd \
     && update-alternatives --install /usr/bin/strings strings /usr/local/bin/pystrings 10 \
     && update-alternatives --install /usr/bin/httpd httpd /usr/local/bin/pyhttpd 10
 
-# ── Agent user ───────────────────────────────────────────────────
-RUN groupadd -g 1000 agent \
-    && useradd -u 1000 -g agent -m -s /bin/bash agent \
-    && printf 'agent ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/agent \
-    && chmod 0440 /etc/sudoers.d/agent
+# ── Droste user ──────────────────────────────────────────────────
+RUN groupadd -g 1000 droste \
+    && useradd -u 1000 -g droste -m -s /bin/bash droste \
+    && echo 'droste:droste' | chpasswd \
+    && printf 'droste ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/droste \
+    && chmod 0440 /etc/sudoers.d/droste
 
 # ── Rootless Podman ──────────────────────────────────────────────
-RUN printf 'agent:100000:65536\n' >> /etc/subuid \
-    && printf 'agent:100000:65536\n' >> /etc/subgid \
-    && mkdir -p /home/agent/.config/containers \
+RUN printf 'droste:100000:65536\n' >> /etc/subuid \
+    && printf 'droste:100000:65536\n' >> /etc/subgid \
+    && mkdir -p /home/droste/.config/containers \
     && printf '[storage]\ndriver = "overlay"\n\n[storage.options.overlay]\nmount_program = "/usr/bin/fuse-overlayfs"\n' \
-       > /home/agent/.config/containers/storage.conf \
-    && chown -R agent:agent /home/agent/.config
+       > /home/droste/.config/containers/storage.conf \
+    && chown -R droste:droste /home/droste/.config
 
 # ── Sysctl (written but not applied — container kernel is shared) ─
 RUN printf 'net.ipv4.ip_forward = 1\nnet.ipv6.conf.all.forwarding = 1\n' \
       > /etc/sysctl.d/99-droste.conf
 
-USER agent
-WORKDIR /home/agent
+USER droste
+WORKDIR /home/droste
 CMD ["/bin/bash"]

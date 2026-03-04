@@ -19,4 +19,4 @@ RUN apt-get update \
       lshw sysbench picocom \
     && rm -rf /var/lib/apt/lists/*
 
-USER agent
+USER droste

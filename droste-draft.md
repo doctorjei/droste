@@ -97,7 +97,7 @@ workflows use the PVE image (which requires both files).
   - Install podman, fuse-overlayfs, slirp4netns, uidmap
   - Install lxc tools, qemu-system-x86_64
   - Configure nested KVM (`/etc/modprobe.d/kvm.conf`)
-  - Create `agent` user (UID 1000) with passwordless sudo
+  - Create `droste` user (UID 1000) with passwordless sudo
   - Strip docs, manpages, firmware blobs
 
 - `droste-pve.yml` — Adds the PVE layer:

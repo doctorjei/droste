@@ -15,4 +15,4 @@ RUN apt-get update \
       ccache ninja-build bear \
     && rm -rf /var/lib/apt/lists/*
 
-USER agent
+USER droste

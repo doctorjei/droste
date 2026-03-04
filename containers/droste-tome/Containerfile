@@ -16,7 +16,7 @@ RUN apt-get update \
       buildah skopeo \
       prometheus-node-exporter lnav \
       postgresql-client redis-tools \
-      fail2ban lynis aide \
+      lynis aide \
       arp-scan tcpreplay auditd \
       blktrace xorriso ipmitool \
     && rm -rf /var/lib/apt/lists/*
@@ -26,4 +26,4 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends tshark \
     && rm -rf /var/lib/apt/lists/*
 
-USER agent
+USER droste

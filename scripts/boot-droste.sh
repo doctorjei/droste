@@ -150,7 +150,7 @@ echo "  Image:    $IMAGE"
 echo "  Overlay:  $OVERLAY"
 echo "  Memory:   ${MEMORY} MB"
 echo "  CPUs:     $CPUS"
-echo "  SSH:      ssh -p ${SSH_PORT} agent@localhost"
+echo "  SSH:      ssh -p ${SSH_PORT} droste@localhost"
 echo "  Persist:  $PERSIST"
 echo ""
 

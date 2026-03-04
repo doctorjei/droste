@@ -227,11 +227,11 @@
         cmd: update-alternatives --install /usr/bin/httpd httpd /usr/local/bin/pyhttpd 10
       changed_when: true
 
-    # ── Agent user ──────────────────────────────────────────────────
-    - name: Remove existing UID 1000 user (if not agent)
+    # ── Droste user ─────────────────────────────────────────────────
+    - name: Remove existing UID 1000 user (if not droste)
       ansible.builtin.shell: |
         existing_user=$(getent passwd 1000 | cut -d: -f1)
-        if [ -n "$existing_user" ] && [ "$existing_user" != "agent" ]; then
+        if [ -n "$existing_user" ] && [ "$existing_user" != "droste" ]; then
           userdel -r "$existing_user"
           echo "removed $existing_user"
         fi
@@ -240,10 +240,10 @@
       register: uid_user_removal
       changed_when: uid_user_removal.stdout | length > 0
 
-    - name: Remove existing GID 1000 group (if not agent)
+    - name: Remove existing GID 1000 group (if not droste)
       ansible.builtin.shell: |
         existing_group=$(getent group 1000 | cut -d: -f1)
-        if [ -n "$existing_group" ] && [ "$existing_group" != "agent" ]; then
+        if [ -n "$existing_group" ] && [ "$existing_group" != "droste" ]; then
           groupdel "$existing_group"
           echo "removed $existing_group"
         fi
@@ -252,63 +252,64 @@
       register: gid_group_removal
       changed_when: gid_group_removal.stdout | length > 0
 
-    - name: Create agent group
+    - name: Create droste group
       ansible.builtin.group:
-        name: agent
+        name: droste
         gid: 1000
         state: present
 
-    - name: Create agent user
+    - name: Create droste user
       ansible.builtin.user:
-        name: agent
+        name: droste
         uid: 1000
-        group: agent
+        group: droste
         shell: /bin/bash
         create_home: true
+        password: "{{ 'droste' | password_hash('sha512') }}"
         state: present
 
-    - name: Grant agent passwordless sudo
+    - name: Grant droste passwordless sudo
       ansible.builtin.copy:
-        dest: /etc/sudoers.d/agent
-        content: "agent ALL=(ALL) NOPASSWD:ALL\n"
+        dest: /etc/sudoers.d/droste
+        content: "droste ALL=(ALL) NOPASSWD:ALL\n"
         mode: "0440"
         owner: root
         group: root
 
     # ── Rootless Podman ─────────────────────────────────────────────
-    - name: Configure subuid for agent
+    - name: Configure subuid for droste
       ansible.builtin.lineinfile:
         path: /etc/subuid
-        line: "agent:100000:65536"
+        line: "droste:100000:65536"
         create: true
         mode: "0644"
 
-    - name: Configure subgid for agent
+    - name: Configure subgid for droste
       ansible.builtin.lineinfile:
         path: /etc/subgid
-        line: "agent:100000:65536"
+        line: "droste:100000:65536"
         create: true
         mode: "0644"
 
     - name: Create containers config directory
       ansible.builtin.file:
-        path: /home/agent/.config/containers
+        path: /home/droste/.config/containers
         state: directory
-        owner: agent
-        group: agent
+        owner: droste
+        group: droste
         mode: "0755"
 
     - name: Write podman storage config
       ansible.builtin.copy:
-        dest: /home/agent/.config/containers/storage.conf
+        dest: /home/droste/.config/containers/storage.conf
         content: |
           [storage]
           driver = "overlay"
 
           [storage.options.overlay]
           mount_program = "/usr/bin/fuse-overlayfs"
-        owner: agent
-        group: agent
+        owner: droste
+        group: droste
         mode: "0644"
 
     # ── SSH hardening ───────────────────────────────────────────────
@@ -318,11 +319,11 @@
         regexp: "^#?PermitRootLogin"
         line: "PermitRootLogin no"
 
-    - name: Disable password authentication
+    - name: Enable password authentication
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: "^#?PasswordAuthentication"
-        line: "PasswordAuthentication no"
+        line: "PasswordAuthentication yes"
 
     - name: Enable and start sshd
       ansible.builtin.systemd:

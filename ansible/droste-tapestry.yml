@@ -51,8 +51,6 @@
       - lnav
       # Redis client
       - redis-tools
-      # Intrusion prevention
-      - fail2ban
       # Security auditing
       - lynis
       # ISO image tools (may already be installed as dep)

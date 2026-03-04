@@ -12,7 +12,7 @@ set -euo pipefail
 # ── Defaults ────────────────────────────────────────────────────────
 HOST="localhost"
 PORT=2222
-USER="agent"
+USER="droste"
 SSH_KEY=""
 
 # ── Usage ───────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ Run smoke tests from a check definition file over SSH.
 Options:
   --host HOST      Guest hostname or IP (default: localhost)
   --port PORT      SSH port (default: 2222)
-  --user USER      SSH user (default: agent)
+  --user USER      SSH user (default: droste)
   --ssh-key FILE   Path to SSH private key (default: ssh default)
   -h, --help       Show this help message
 
