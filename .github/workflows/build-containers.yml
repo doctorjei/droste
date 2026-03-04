@@ -34,7 +34,7 @@ jobs:
       - name: Build and push hair
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-hair/
+          context: .
           file: containers/droste-hair/Containerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:latest
