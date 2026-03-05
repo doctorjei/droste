@@ -1,0 +1,20 @@
+ARG BASE_IMAGE=droste-fiber
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-sheet: VM tooling layer (yarn equivalent)"
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      ansible gettext-base \
+      squashfs-tools cloud-image-utils qemu-utils \
+      dosfstools mtools ntfs-3g \
+      gdisk parted btrfs-progs \
+      cryptsetup mdadm \
+      ncdu \
+      hping3 bmon nethogs nicstat ethtool \
+      lshw sysbench picocom \
+    && rm -rf /var/lib/apt/lists/*
+
+USER droste

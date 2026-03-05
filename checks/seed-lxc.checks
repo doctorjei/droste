@@ -1,0 +1,51 @@
+# User
+droste user exists with UID 1000	test "$(id -u droste)" -eq 1000
+droste group	id -gn droste | grep -q droste
+passwordless sudo	sudo -n true
+
+# Core utilities (from seed base)
+curl available	curl --version
+wget available	wget --version
+file available	file --version
+nc available	command -v nc
+socat available	socat -V
+pstree available	pstree --version
+killall available	command -v killall
+hexdump available	hexdump --version
+iproute2 (ip command)	ip -V
+
+# SSH
+openssh-server installed	dpkg -s openssh-server
+openssh-sftp-server installed	test -x /usr/lib/openssh/sftp-server
+ssh-import-id available	command -v ssh-import-id
+
+# Cloud / VM tools (kept in OCI)
+qemu-img available	command -v qemu-img
+cloud-localds available	command -v cloud-localds
+
+# Python
+python3 available	python3 --version
+
+# Locales
+locale-gen ran	test -f /usr/lib/locale/locale-archive || locale -a | grep -q en_US
+
+# Sysctl config written
+sysctl droste config	test -f /etc/sysctl.d/99-droste.conf
+
+# Init/systemd packages (added back for kento/LXC boot)
+init installed	dpkg -s init 2>/dev/null | grep -q "^Status: install ok installed"
+systemd installed	dpkg -s systemd 2>/dev/null | grep -q "^Status: install ok installed"
+systemd-resolved installed	dpkg -s systemd-resolved 2>/dev/null | grep -q "^Status: install ok installed"
+systemd-sysv installed	dpkg -s systemd-sysv 2>/dev/null | grep -q "^Status: install ok installed"
+systemd-timesyncd installed	dpkg -s systemd-timesyncd 2>/dev/null | grep -q "^Status: install ok installed"
+udev installed	dpkg -s udev 2>/dev/null | grep -q "^Status: install ok installed"
+dbus installed	dpkg -s dbus 2>/dev/null | grep -q "^Status: install ok installed"
+dbus-daemon installed	dpkg -s dbus-daemon 2>/dev/null | grep -q "^Status: install ok installed"
+polkitd installed	dpkg -s polkitd 2>/dev/null | grep -q "^Status: install ok installed"
+cloud-init installed	dpkg -s cloud-init 2>/dev/null | grep -q "^Status: install ok installed"
+cloud-guest-utils installed	dpkg -s cloud-guest-utils 2>/dev/null | grep -q "^Status: install ok installed"
+kmod installed	dpkg -s kmod 2>/dev/null | grep -q "^Status: install ok installed"
+apparmor installed	dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok installed"
+
+# Init functional
+/sbin/init exists	test -x /sbin/init

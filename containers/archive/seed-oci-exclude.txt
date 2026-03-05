@@ -1,0 +1,47 @@
+# OCI seed exclusions: packages from lxc/seed-target.txt that are excluded
+# from the OCI base image.
+#
+# Only excludes packages that would pull in systemd, need an init system
+# to function, or have no metadata endpoint in OCI.
+#
+# The OCI base is defined as: seed-target.txt MINUS this file.
+# This keeps OCI in sync with LXC seed automatically.
+#
+# Updated: 2026-03-04
+
+# Init system — these pull in systemd as a dependency
+init
+systemd
+systemd-resolved
+systemd-sysv
+systemd-timesyncd
+libpam-systemd
+libsystemd-shared
+udev
+
+# D-Bus system bus — no init system to start it, nothing uses it
+dbus
+dbus-bin
+dbus-daemon
+dbus-session-bus-common
+dbus-system-bus-common
+
+# Authorization — needs D-Bus
+polkitd
+
+# Cloud metadata — no metadata endpoint in OCI
+cloud-init
+cloud-guest-utils
+cloud-utils
+
+# Automatic updates — container images are immutable
+unattended-upgrades
+
+# Kernel module management — no kernel access in OCI
+kmod
+
+# Device mapper — needs kernel device mapper
+dmsetup
+
+# AppArmor — needs kernel AppArmor support
+apparmor

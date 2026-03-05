@@ -6,24 +6,24 @@ envsubst available	envsubst --version
 mksquashfs available	command -v mksquashfs
 
 # Filesystem tools
-gdisk available	test -x /usr/sbin/gdisk
-parted available	sudo parted --version
-mkfs.btrfs available	test -x /usr/sbin/mkfs.btrfs
-cryptsetup available	test -x /usr/sbin/cryptsetup
-mdadm available	sudo mdadm --version
-mkfs.fat available	test -x /usr/sbin/mkfs.fat
-mount.ntfs available	test -x /usr/sbin/mount.ntfs-3g
+gdisk available	command -v gdisk
+parted available	parted --version
+mkfs.btrfs available	command -v mkfs.btrfs
+cryptsetup available	command -v cryptsetup
+mdadm available	command -v mdadm
+mkfs.fat available	command -v mkfs.fat
+mount.ntfs available	command -v mount.ntfs-3g
 mtools available	command -v mtools
 ncdu available	ncdu -v
 
 # Network diagnostics
-hping3 available	test -x /usr/sbin/hping3
+hping3 available	command -v hping3
 bmon available	command -v bmon
-nethogs available	test -x /usr/sbin/nethogs
-nicstat available	test -x /usr/bin/nicstat
-ethtool available	test -x /usr/sbin/ethtool
+nethogs available	command -v nethogs
+nicstat available	command -v nicstat
+ethtool available	command -v ethtool
 
 # Hardware/benchmarking
-lshw available	sudo lshw -version
+lshw available	lshw -version
 sysbench available	sysbench --version
 picocom available	picocom --help

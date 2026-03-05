@@ -1,0 +1,21 @@
+ARG BASE_IMAGE=droste-sheet
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-page: HA/cluster layer (fabric equivalent)"
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      clustershell \
+      pcs pacemaker pacemaker-cli-utils resource-agents \
+      keepalived ebtables fence-agents-common \
+      pxelinux syslinux-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# ceph-common installed individually (large package)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ceph-common \
+    && rm -rf /var/lib/apt/lists/*
+
+USER droste

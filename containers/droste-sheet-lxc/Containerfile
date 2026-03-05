@@ -1,0 +1,15 @@
+ARG BASE_IMAGE=droste-sheet
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-sheet-lxc: bootable sheet (kento system container)"
+
+USER root
+
+COPY oci/seed-oci-exclude.txt /tmp/seed-oci-exclude.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       $(grep -v '^#' /tmp/seed-oci-exclude.txt | grep -v '^$') \
+    && rm -f /tmp/seed-oci-exclude.txt \
+    && rm -rf /var/lib/apt/lists/*
+
+CMD ["/sbin/init"]

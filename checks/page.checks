@@ -1,8 +1,8 @@
 # Pacemaker/HA
-crm_mon available	sudo crm_mon --version
-pcs available	test -x /usr/sbin/pcs
+crm_mon available	crm_mon --version
+pcs available	command -v pcs
 resource agents installed	test -d /usr/lib/ocf/resource.d
-keepalived available	test -x /usr/sbin/keepalived
+keepalived available	command -v keepalived
 
 # Cluster
 clush available	clush --version
@@ -12,7 +12,7 @@ ceph available	ceph --version
 rbd available	rbd --version
 
 # Networking
-ebtables available	test -x /usr/sbin/ebtables
+ebtables available	command -v ebtables
 
 # Fencing
 fence-agents-common installed	dpkg -s fence-agents-common >/dev/null 2>&1

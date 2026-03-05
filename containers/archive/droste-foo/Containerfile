@@ -5,7 +5,7 @@ LABEL description="droste-foo: OCI-LXC bootable system container (seed equivalen
 
 # droste-foo adds back the LXC-specific packages that were stripped
 # from droste-bar. The result is equivalent to a seed rootfs and can
-# boot as a system container (systemd as PID 1) via droste-oci-hook.sh.
+# boot as a system container (systemd as PID 1) via kento.
 
 COPY oci/seed-oci-exclude.txt /tmp/seed-oci-exclude.txt
 RUN apt-get update \

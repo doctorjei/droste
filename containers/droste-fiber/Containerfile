@@ -1,0 +1,62 @@
+ARG BASE_IMAGE=droste-seed
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-fiber: container-ready base (thread equivalent)"
+
+USER root
+
+# ── Fiber packages (thread equivalent for OCI) ──────────────────
+# Excludes kernel-dependent packages from LXC fiber: ipvsadm, molly-guard,
+# cifs-utils, nfs-common, fatrace, lxcfs (see checks/hair.checks).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      # Containers
+      lxc podman fuse-overlayfs slirp4netns uidmap systemd-container \
+      # Networking
+      dnsmasq nftables ipcalc \
+      # Utilities
+      jq rsync tmux smbclient git make \
+      dnsutils tree unzip zip pipx htop patch bc \
+      inetutils-telnet ssh-import-id debootstrap sshpass xmlstarlet \
+      lsof strace sysstat iotop iftop expect moreutils \
+      rename entr jo whois sqlite3 atop etckeeper tftpd-hpa \
+      # Remote FS (smbnetfs replaces cifs-utils; nfs-common excluded)
+      smbnetfs sshfs \
+      # Filesystem
+      acl attr \
+      # VPN
+      wireguard-tools \
+      # Firewall
+      conntrack ipset \
+      # Socket / ping / ARP
+      fping iputils-arping \
+      # Parallel execution
+      parallel \
+      # DNS / filesystem monitoring (fatrace excluded — needs fanotify)
+      dnstop inotify-tools \
+      # INI editing
+      crudini \
+      # Debugging
+      ltrace \
+      # Pipe viewer
+      pv \
+      # Hex tools
+      xxd \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python micro-tools ──────────────────────────────────────────
+COPY ansible/files/pystrings /usr/local/bin/pystrings
+COPY ansible/files/pyhttpd  /usr/local/bin/pyhttpd
+RUN chmod 755 /usr/local/bin/pystrings /usr/local/bin/pyhttpd \
+    && update-alternatives --install /usr/bin/strings strings /usr/local/bin/pystrings 10 \
+    && update-alternatives --install /usr/bin/httpd httpd /usr/local/bin/pyhttpd 10
+
+# ── Rootless Podman ──────────────────────────────────────────────
+RUN printf 'droste:100000:65536\n' >> /etc/subuid \
+    && printf 'droste:100000:65536\n' >> /etc/subgid \
+    && mkdir -p /home/droste/.config/containers \
+    && printf '[storage]\ndriver = "overlay"\n\n[storage.options.overlay]\nmount_program = "/usr/bin/fuse-overlayfs"\n' \
+       > /home/droste/.config/containers/storage.conf \
+    && chown -R droste:droste /home/droste/.config
+
+USER droste

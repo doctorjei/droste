@@ -7,10 +7,10 @@ tcpreplay available	command -v tcpreplay
 
 # Network scanning
 nmap available	command -v nmap
-arp-scan available	command -v arp-scan
+arp-scan available	test -x /usr/sbin/arp-scan
 
 # Load balancing
-haproxy available	command -v haproxy
+haproxy available	test -x /usr/sbin/haproxy
 
 # Hardware management
 ipmitool available	command -v ipmitool
@@ -22,18 +22,18 @@ ab available	command -v ab
 iperf3 available	command -v iperf3
 
 # Disk/storage tools
-blktrace available	command -v blktrace
+blktrace available	test -x /usr/sbin/blktrace
 xorriso available	command -v xorriso
 
 # Routing
-bird available	command -v bird
+bird available	test -x /usr/sbin/bird
 
 # Container ecosystem
 buildah available	command -v buildah
 skopeo available	command -v skopeo
 
 # Observability
-prometheus-node-exporter available	command -v prometheus-node-exporter
+prometheus-node-exporter available	test -x /usr/bin/prometheus-node-exporter
 lnav available	command -v lnav
 
 # Database clients
@@ -41,6 +41,6 @@ psql available	command -v psql
 redis-cli available	command -v redis-cli
 
 # Security
-lynis available	command -v lynis
+lynis available	test -x /usr/sbin/lynis
 aide available	command -v aide
-auditctl available	command -v auditctl
+auditctl available	test -x /usr/sbin/auditctl

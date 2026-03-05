@@ -6,6 +6,7 @@ passwordless sudo	sudo -n true
 # Containers
 lxc-create available	lxc-create --version
 podman available	podman --version
+podman info runs	podman info --format '{{.Host.OS}}'
 fuse-overlayfs available	fuse-overlayfs --version
 slirp4netns available	slirp4netns --version
 systemd-nspawn available	command -v systemd-nspawn
@@ -16,6 +17,9 @@ iproute2 (ip command)	ip -V
 dnsmasq available	test -x /usr/sbin/dnsmasq
 nftables available	sudo nft --version
 ipcalc available	ipcalc --version
+ipvsadm available	test -x /usr/sbin/ipvsadm
+IPv4 forwarding configured	grep -q 'net.ipv4.ip_forward = 1' /etc/sysctl.d/99-droste.conf
+IPv6 forwarding configured	grep -q 'net.ipv6.conf.all.forwarding = 1' /etc/sysctl.d/99-droste.conf
 
 # Utilities
 curl available	curl --version
@@ -38,6 +42,7 @@ patch available	patch --version
 bc available	echo quit | bc
 telnet available	command -v telnet
 ssh-import-id available	command -v ssh-import-id
+molly-guard available	test -x /usr/lib/molly-guard/molly-guard
 debootstrap available	test -x /usr/sbin/debootstrap
 sshpass available	sshpass -V
 xmlstarlet available	xmlstarlet --version
@@ -59,17 +64,20 @@ sqlite3 available	sqlite3 --version
 atop available	atop -V
 etckeeper available	command -v etckeeper
 tftpd available	test -x /usr/sbin/in.tftpd
-smbnetfs available	command -v smbnetfs
+mount.cifs available	test -x /usr/sbin/mount.cifs
+nfs client available	test -x /usr/sbin/mount.nfs
 sshfs available	sshfs --version
 getfacl available	getfacl --version
 getfattr available	getfattr --version
 wg available	wg --version
 socat available	socat -V
-fping available	command -v fping
+fping available	fping --version
 arping available	command -v arping
 parallel available	parallel --version
 dnstop available	command -v dnstop
+fatrace available	test -x /usr/sbin/fatrace
 crudini available	crudini --version
+lxcfs available	command -v lxcfs
 inotifywait available	command -v inotifywait
 conntrack available	sudo conntrack --version
 ipset available	test -x /usr/sbin/ipset
@@ -77,8 +85,12 @@ ltrace available	ltrace --version
 pv available	pv --version
 hexdump available	hexdump --version
 xxd available	xxd --version
-strings available	command -v strings
+strings available	strings --help
 httpd available	command -v httpd
+
+# System
+root login disabled	grep -q '^PermitRootLogin no' /etc/ssh/sshd_config
+password auth enabled	grep -q '^PasswordAuthentication yes' /etc/ssh/sshd_config
 
 # Rootless Podman
 subuid configured	grep -q '^droste:' /etc/subuid

@@ -1,0 +1,6 @@
+ARG BASE_IMAGE=droste-press
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-gutenberg: empty cap layer on press"
+
+USER droste

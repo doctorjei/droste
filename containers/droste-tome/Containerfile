@@ -1,0 +1,26 @@
+ARG BASE_IMAGE=droste-page
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-tome: testing/security/observability layer (tapestry equivalent)"
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      openvswitch-switch nmap bird2 \
+      haproxy apache2-utils \
+      fio stress-ng iperf3 \
+      buildah skopeo \
+      prometheus-node-exporter lnav \
+      postgresql-client redis-tools \
+      lynis aide \
+      arp-scan tcpreplay auditd \
+      blktrace xorriso ipmitool \
+    && rm -rf /var/lib/apt/lists/*
+
+# tshark installed individually (large package, ~124 MB)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tshark \
+    && rm -rf /var/lib/apt/lists/*
+
+USER droste

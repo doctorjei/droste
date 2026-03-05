@@ -40,13 +40,20 @@ Images (VM):
   all        All tiers
 
 Images (container):
-  root       OCI seed base (unified base)
-  hair       Container base (thread equivalent)
-  wool       VM tooling layer (yarn equivalent)
-  felt       HA/cluster layer (fabric equivalent)
-  amimono    Testing/security layer (tapestry equivalent)
-  stuffer     Dev toolchain (loom equivalent)
-  stuffinator Empty cap layer on stuffer
+  seed         OCI base (unified base, built by build-seed.sh)
+  seed-lxc     Bootable seed (kento system container)
+  fiber        Container base (thread equivalent)
+  fiber-lxc    Bootable fiber (kento system container)
+  sheet        VM tooling layer (yarn equivalent)
+  sheet-lxc    Bootable sheet (kento system container)
+  page         HA/cluster layer (fabric equivalent)
+  page-lxc     Bootable page (kento system container)
+  tome         Testing/security layer (tapestry equivalent)
+  tome-lxc     Bootable tome (kento system container)
+  press        Dev toolchain (loom equivalent)
+  press-lxc    Bootable press (kento system container)
+  gutenberg    Empty cap layer on press
+  gutenberg-lxc  Bootable gutenberg (kento system container)
 
 Images (LXC):
   fiber      LXC base (thread equivalent)
@@ -72,16 +79,16 @@ Examples:
   $(basename "$0") test all                 # smoke test all tiers
   $(basename "$0") build all --force        # build all tiers (overwrite)
   $(basename "$0") test yarn --ssh-key ~/.ssh/id_ed25519.pub
-  $(basename "$0") build hair               # build hair container (auto-detected)
-  $(basename "$0") test wool                # test wool container (auto-detected)
+  $(basename "$0") build fiber               # build fiber container (auto-detected)
+  $(basename "$0") build fiber-lxc          # build bootable fiber for kento
+  $(basename "$0") test sheet               # test sheet container (auto-detected)
   $(basename "$0") vm build thread          # explicit VM prefix
   $(basename "$0") vm test yarn             # explicit VM prefix
-  $(basename "$0") container build hair     # explicit container prefix
-  $(basename "$0") container test wool      # explicit container prefix
+  $(basename "$0") container build fiber    # explicit container prefix
+  $(basename "$0") container test sheet     # explicit container prefix
   $(basename "$0") container build all      # build all containers
-  $(basename "$0") lxc build fiber          # build fiber LXC rootfs
-  $(basename "$0") lxc test fiber           # test fiber LXC rootfs
-  $(basename "$0") build fiber              # build fiber (auto-detected as LXC)
+  $(basename "$0") lxc build fiber          # build fiber LXC rootfs (chroot)
+  $(basename "$0") lxc test fiber           # test fiber LXC rootfs (chroot)
 EOF
 }
 
@@ -321,10 +328,11 @@ resolve_tiers() {
 }
 
 # ── Container support ────────────────────────────────────────────────
-ALL_CONTAINER_TIERS=(root hair wool felt amimono stuffer stuffinator)
+ALL_CONTAINER_TIERS=(seed fiber fiber-lxc sheet sheet-lxc page page-lxc tome tome-lxc press press-lxc gutenberg gutenberg-lxc)
+# seed-lxc omitted — seed is built by build-seed.sh, seed-lxc is first Containerfile tier
 
 is_container_tier() {
-    case "$1" in root|hair|wool|felt|amimono|stuffer|stuffinator) return 0 ;; *) return 1 ;; esac
+    case "$1" in seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc) return 0 ;; *) return 1 ;; esac
 }
 
 detect_container_cmd() {
@@ -398,15 +406,32 @@ do_build_container() {
     local container_cmd
     container_cmd=$(detect_container_cmd)
 
+    # seed is built by build-seed.sh (chroot + import), not a Containerfile
+    if [[ "$tier" == "seed" ]]; then
+        echo "Building droste-seed (via build-seed.sh)..."
+        echo ""
+        "$PROJECT_DIR/containers/droste-seed/build-seed.sh"
+        echo ""
+        do_test_container "$tier"
+        return
+    fi
+
     # Map tier → parent image for BASE_IMAGE arg
     local parent=""
     case "$tier" in
-        hair)        parent="root" ;;
-        wool)        parent="hair" ;;
-        felt)        parent="wool" ;;
-        amimono)     parent="felt" ;;
-        stuffer)     parent="amimono" ;;
-        stuffinator) parent="stuffer" ;;
+        seed-lxc)       parent="seed" ;;
+        fiber)          parent="seed" ;;
+        fiber-lxc)      parent="fiber" ;;
+        sheet)          parent="fiber" ;;
+        sheet-lxc)      parent="sheet" ;;
+        page)           parent="sheet" ;;
+        page-lxc)       parent="page" ;;
+        tome)           parent="page" ;;
+        tome-lxc)       parent="tome" ;;
+        press)          parent="tome" ;;
+        press-lxc)      parent="press" ;;
+        gutenberg)      parent="press" ;;
+        gutenberg-lxc)  parent="gutenberg" ;;
     esac
 
     echo "Building droste-${tier} container..."
@@ -464,13 +489,15 @@ resolve_container_tiers() {
 # ── LXC support ──────────────────────────────────────────────────────
 ALL_LXC_TIERS=(fiber sheet page tome press gutenberg)
 
+# LXC chroot tiers — only reached via explicit 'lxc' subcommand.
+# Bare tier names (fiber, sheet, etc.) now route to container builds.
 is_lxc_tier() {
-    case "$1" in fiber|sheet|page|tome|press|gutenberg) return 0 ;; *) return 1 ;; esac
+    return 1
 }
 
 do_test_lxc() {
     local tier="$1"
-    local checkfile="$PROJECT_DIR/checks/${tier}.checks"
+    local checkfile="$PROJECT_DIR/checks/${tier}-lxc.checks"
 
     # Layer chain: seed is always base, then each tier up to the target
     local -A tier_chain
@@ -640,12 +667,12 @@ do_container_command() {
     if [[ $# -gt 0 ]]; then
         case "$1" in
             build|test|all) sub_cmd="$1"; shift ;;
-            root|hair|wool|felt|amimono|stuffer|stuffinator) container_image="$1"; shift ;;
+            seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc) container_image="$1"; shift ;;
         esac
     fi
     if [[ $# -gt 0 ]]; then
         case "$1" in
-            root|hair|wool|felt|amimono|stuffer|stuffinator|all) container_image="$1"; shift ;;
+            seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc|all) container_image="$1"; shift ;;
         esac
     fi
     while [[ $# -gt 0 ]]; do
@@ -787,11 +814,7 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
-        fiber|sheet|page|tome|press|gutenberg)
-            IMAGE="$1"
-            shift
-            ;;
-        hair|wool|felt|amimono|stuffer|stuffinator)
+        seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc)
             IMAGE="$1"
             shift
             ;;
@@ -809,11 +832,7 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
-        fiber|sheet|page|tome|press|gutenberg)
-            IMAGE="$1"
-            shift
-            ;;
-        hair|wool|felt|amimono|stuffer|stuffinator)
+        seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc)
             IMAGE="$1"
             shift
             ;;

@@ -1,0 +1,16 @@
+ARG BASE_IMAGE=droste-tome
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-press: C/C++ development toolchain (loom equivalent)"
+
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      build-essential cmake pkg-config \
+      autoconf automake libtool \
+      gdb valgrind \
+      ccache ninja-build bear \
+    && rm -rf /var/lib/apt/lists/*
+
+USER droste
