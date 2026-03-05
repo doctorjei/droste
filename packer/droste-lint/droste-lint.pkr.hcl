@@ -51,7 +51,7 @@ source "qemu" "droste-lint" {
   vnc_port_max = 5999
 
   # Bootstrap cloud-init: create droste user with password so Packer
-  # can SSH in. The final image keeps password auth enabled.
+  # can SSH in. The cleanup script locks password auth before finalization.
   cd_content = {
     "meta-data" = ""
     "user-data" = <<-EOF

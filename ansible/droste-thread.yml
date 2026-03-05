@@ -265,7 +265,7 @@
         group: droste
         shell: /bin/bash
         create_home: true
-        password: "{{ 'droste' | password_hash('sha512') }}"
+        password: '!'
         state: present
 
     - name: Grant droste passwordless sudo
@@ -319,11 +319,11 @@
         regexp: "^#?PermitRootLogin"
         line: "PermitRootLogin no"
 
-    - name: Enable password authentication
+    - name: Disable password authentication
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: "^#?PasswordAuthentication"
-        line: "PasswordAuthentication yes"
+        line: "PasswordAuthentication no"
 
     - name: Enable and start sshd
       ansible.builtin.systemd:

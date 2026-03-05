@@ -16,13 +16,35 @@ Requires KVM and Packer. Each tier auto-builds its prerequisites if missing.
 | Field | Value |
 |-------|-------|
 | Username | `droste` |
-| Password | `droste` |
+| Password | locked (no login password) |
 | UID/GID | 1000 |
 | Sudo | passwordless (NOPASSWD) |
-| SSH | key + password auth enabled |
+| SSH | key auth only (password auth disabled) |
 
-**These images are for isolated lab/test environments only.** Change the
-password or disable password auth before exposing to any untrusted network.
+## SSH Key Injection
+
+VM images have no login password. You must provide an SSH public key via
+cloud-init on first boot. The `boot-droste.sh` script handles this:
+
+```bash
+scripts/boot-droste.sh --ssh-key ~/.ssh/id_ed25519.pub
+```
+
+Without an SSH key, the VM will boot but you will have no way to log in
+(no console password, no SSH password auth). The `--ssh-key` flag is
+required.
+
+For deployments outside `boot-droste.sh` (libvirt, Proxmox, OpenStack),
+pass a cloud-init user-data that includes `ssh_authorized_keys` for the
+`droste` user. See `cloud-init/user-data.yml` for the template.
+
+### Build-time vs runtime authentication
+
+During Packer builds, the inline cloud-init in each `.pkr.hcl` creates a
+temporary password so Packer can SSH in for provisioning. The ansible
+playbook then locks the password and disables SSH password auth before
+the image is finalized. The password in the Packer configs is build-only
+and never present in shipped images.
 
 ## Testing
 

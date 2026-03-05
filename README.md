@@ -50,13 +50,9 @@ LXC tiers include kernel-dependent packages (lvm2, DRBD, iSCSI, etc.) that work 
 
 Pick the smallest tier that has what you need. Most container and networking work only needs **thread** / **fiber** / **hair**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric** / **page** / **felt**.
 
-Each image includes a `droste` user (UID 1000) with passwordless sudo. SSH accepts both key and password auth. See [BUILDING.md](BUILDING.md) for build and test instructions.
-
-> **Security notice**: The default password for the `droste` user is **`droste`**.
-> SSH password authentication is enabled. These images are designed for
-> isolated lab and test environments. **Never expose a droste VM to an
-> untrusted network without changing the password and/or disabling
-> password authentication first.**
+Each image includes a `droste` user (UID 1000) with passwordless sudo. SSH key
+injection via cloud-init is required on first boot -- there is no login password.
+See [BUILDING.md](BUILDING.md) for build instructions and SSH key setup.
 
 ## droste-thread: Basic Tools & Container Tools
 *(based on debian-13-genericcloud)*

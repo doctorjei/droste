@@ -51,7 +51,7 @@ source "qemu" "droste-thread" {
   vnc_port_max = 5999
 
   # Bootstrap cloud-init: create droste user with password so Packer
-  # can SSH in. The final image keeps password auth enabled.
+  # can SSH in. The ansible playbook locks the password before finalization.
   cd_content = {
     "meta-data" = ""
     "user-data" = <<-EOF

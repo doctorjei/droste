@@ -26,8 +26,11 @@ rm -rf /var/lib/apt/lists/*
 : > /etc/machine-id
 chmod 0444 /etc/machine-id
 
-# Ensure SSH password auth stays enabled
-sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+# Lock droste user password (SSH key required)
+passwd -l droste
+
+# Ensure SSH password auth is disabled (key-only access)
+sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 
 # Truncate all logs
 find /var/log -type f -exec truncate -s 0 {} +

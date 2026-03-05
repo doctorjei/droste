@@ -19,12 +19,11 @@ users:
     groups: sudo
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
-    lock_passwd: false
-    plain_text_passwd: droste
+    lock_passwd: true
     ssh_authorized_keys:
       - "${SSH_PUBLIC_KEY}"
 
-ssh_pwauth: true
+ssh_pwauth: false
 
 # Pre-create virtiofs mount point and add fstab entry.
 # The mount only succeeds if the VM was started with --share.
