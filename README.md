@@ -8,7 +8,8 @@ Nested virtualization images for testing infrastructure operations — container
 |--------|------|----------|------|--------|
 | **VM** | genericcloud qcow2 | Full nested virt, hardware passthrough | systemd | Own kernel |
 | **LXC** | genericcloud → seed | System containers, kernel module testing | systemd | Host kernel |
-| **OCI** | debian:trixie-slim | Application containers, CI/CD | None | Host kernel |
+| **OCI** | genericcloud → seed | Application containers, CI/CD | None | Host kernel |
+| **OCI -lxc** | OCI + init/systemd | System containers via kento | systemd | Host kernel |
 
 ## Tiers
 
@@ -25,30 +26,35 @@ Each tier builds on the previous one. Pick the smallest that has what you need.
 | **loom** | tapestry | C/C++ development toolchain | 1.5 GB |
 | **jacquard** | loom | Proxmox VE (PVE kernel, ZFS, corosync) | 2.2 GB |
 
-### LXC Tiers (paper/publishing metaphor)
+### OCI Tiers (paper/publishing metaphor)
 
-| Tier | Based on | Focus | Packages | Size |
-|------|----------|-------|----------|------|
-| **seed** | genericcloud (stripped) | Minimal system container base | 292 | 101 MB |
-| **fiber** | seed | Basic tools, containers, networking | 440 | 251 MB |
-| **sheet** | fiber | Storage, VM tooling, kernel-dependent tools | 491 | 337 MB |
-| **page** | sheet | HA clustering, DRBD, iSCSI, Ceph | 635 | 403 MB |
-| **tome** | page | Testing, security, observability | 764 | 628 MB |
-| **gutenberg** | tome | C/C++ development toolchain | 839 | 790 MB |
+Process containers (no init, for CI/application use):
 
-### OCI Tiers (textile crafting metaphor)
+| Tier | Based on | Focus | Size |
+|------|----------|-------|------|
+| **seed** | genericcloud (stripped) | Minimal OCI base | 413 MB |
+| **fiber** | seed | Basic tools, containers, networking | 1.02 GB |
+| **sheet** | fiber | Storage, VM tooling | 1.63 GB |
+| **page** | sheet | HA clustering, Ceph | 2.1 GB |
+| **tome** | page | Testing, security, observability | 3.16 GB |
+| **press** | tome | C/C++ development toolchain | 3.89 GB |
+| **gutenberg** | press | Empty cap layer | 3.89 GB |
 
-| Tier | Based on | Focus |
-|------|----------|-------|
-| **hair** | debian:trixie-slim | Basic tools, containers, networking |
-| **wool** | hair | Storage, VM tooling |
-| **felt** | wool | HA clustering, Ceph |
-| **amimono** | felt | Testing, security, observability |
-| **embellisher** | amimono | C/C++ development toolchain |
+System containers (`-lxc` variants, bootable via [kento](https://pypi.org/project/kento/)):
 
-LXC tiers include kernel-dependent packages (lvm2, DRBD, iSCSI, etc.) that work in system containers but not OCI application containers. No jacquard equivalent exists for LXC or OCI (hypervisor stack requires its own kernel).
+| Tier | Based on | Focus | Size |
+|------|----------|-------|------|
+| **seed-lxc** | seed | Bootable seed (systemd PID 1) | 553 MB |
+| **fiber-lxc** | fiber | + kernel-dependent tools | 1.16 GB |
+| **sheet-lxc** | sheet | + lvm2, pciutils, nbd-client | 1.77 GB |
+| **page-lxc** | page | + drbd, iscsi, multipath | 2.25 GB |
+| **tome-lxc** | tome | + sg3-utils, smartmontools, qemu-arm | 3.44 GB |
+| **press-lxc** | press | Same kernel packages as tome-lxc | 4.17 GB |
+| **gutenberg-lxc** | gutenberg | Same kernel packages as tome-lxc | 4.17 GB |
 
-Pick the smallest tier that has what you need. Most container and networking work only needs **thread** / **fiber** / **hair**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric** / **page** / **felt**.
+Each `-lxc` variant adds init/systemd (21 packages) plus cumulative kernel-dependent packages that work in system containers but not process containers. No jacquard equivalent exists for OCI (hypervisor stack requires its own kernel).
+
+Pick the smallest tier that has what you need. Most container and networking work only needs **thread** / **fiber**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric** / **page**.
 
 Each image includes a `droste` user (UID 1000) with passwordless sudo. SSH key
 injection via cloud-init is required on first boot -- there is no login password.
