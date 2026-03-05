@@ -13,6 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUTPUT_DIR="$PROJECT_DIR/output"
+QUIET=false
 
 # Tier chain: each tier lists its prerequisites (bottom to top)
 declare -A TIER_LAYERS
@@ -27,7 +28,7 @@ ALL_TIERS=(fiber sheet page tome press gutenberg)
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") TIER
+Usage: $(basename "$0") TIER [OPTIONS]
 
 Build LXC overlay tarballs for droste tiers.
 
@@ -42,6 +43,9 @@ Tiers:
   press      Loom equivalent (C/C++ dev toolchain)
   gutenberg  Empty cap layer on press
   all        Build all tiers sequentially
+
+Options:
+  --quiet    Suppress provision script output (show only on failure)
 
 Requires droste-seed.tar.xz in output/ (built by build-seed.sh).
 Each tier requires all previous tier overlay tarballs in output/.
@@ -151,7 +155,19 @@ PROVISION_EOF
     chmod +x "$work_dir/merged/tmp/provision.sh"
 
     echo "Running provision script in chroot..."
-    chroot "$work_dir/merged" /tmp/provision.sh
+    if [[ "$QUIET" == true ]]; then
+        local logfile="/tmp/droste-provision-${tier}.log"
+        if ! chroot "$work_dir/merged" /tmp/provision.sh > "$logfile" 2>&1; then
+            echo ""
+            echo "Provision failed. Full output:"
+            cat "$logfile"
+            rm -f "$logfile"
+            exit 1
+        fi
+        rm -f "$logfile"
+    else
+        chroot "$work_dir/merged" /tmp/provision.sh
+    fi
 
     # Unmount bind mounts and overlay
     echo "Cleaning up mounts..."
@@ -460,8 +476,18 @@ do_build_gutenberg() {
     ls -lh "$OUTPUT_DIR/droste-gutenberg.tar.xz"
 }
 
+# ── Parse options ────────────────────────────────────────────────────
+TIER="${1:-}"
+shift || true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --quiet) QUIET=true; shift ;;
+        *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+    esac
+done
+
 # ── Main ─────────────────────────────────────────────────────────────
-case "${1:-}" in
+case "$TIER" in
     fiber)     do_build_fiber ;;
     sheet)     do_build_sheet ;;
     page)      do_build_page ;;

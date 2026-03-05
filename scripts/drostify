@@ -69,7 +69,7 @@ Options:
   --force          Overwrite existing images (required for 'build all')
   --ssh-key FILE   Path to SSH public key (default: auto-detect)
   --ssh-port PORT  Host port for SSH (default: 2222)
-  --verbose        Show full unfiltered build output (container builds)
+  --verbose        Show full build output (builds are quiet by default)
   --debug          Alias for --verbose
 
 Examples:
@@ -442,11 +442,32 @@ do_build_container() {
         build_args+=(--build-arg "BASE_IMAGE=localhost/droste-${parent}")
     fi
 
-    $container_cmd build \
-        "${build_args[@]}" \
-        -t "droste-${tier}" \
-        -f "$PROJECT_DIR/containers/droste-${tier}/Containerfile" \
-        "$PROJECT_DIR"
+    if [[ "$VERBOSE" == true ]]; then
+        $container_cmd build \
+            "${build_args[@]}" \
+            -t "droste-${tier}" \
+            -f "$PROJECT_DIR/containers/droste-${tier}/Containerfile" \
+            "$PROJECT_DIR"
+    else
+        local logfile
+        logfile=$(mktemp /tmp/droste-build-XXXXXX.log)
+        set -o pipefail
+        if $container_cmd build \
+            "${build_args[@]}" \
+            -t "droste-${tier}" \
+            -f "$PROJECT_DIR/containers/droste-${tier}/Containerfile" \
+            "$PROJECT_DIR" 2>&1 | tee "$logfile" \
+            | grep --line-buffered -E '^STEP |^COMMIT |^Successfully '; then
+            rm -f "$logfile"
+        else
+            echo ""
+            echo "Build failed. Full output:"
+            cat "$logfile"
+            rm -f "$logfile"
+            return 1
+        fi
+        set +o pipefail
+    fi
 
     echo ""
     echo "Build complete."
@@ -581,7 +602,11 @@ do_build_lxc() {
     echo "Building droste-${tier} LXC rootfs..."
     echo ""
 
-    "$PROJECT_DIR/lxc/build-rootfs.sh" "$tier"
+    local lxc_args=("$tier")
+    if [[ "$VERBOSE" != true ]]; then
+        lxc_args+=(--quiet)
+    fi
+    "$PROJECT_DIR/lxc/build-rootfs.sh" "${lxc_args[@]}"
 
     echo ""
     do_test_lxc "$tier"
