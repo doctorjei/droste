@@ -98,10 +98,35 @@ echo "  + SSH connection"
 PASS=1
 echo ""
 
-# ── Run checks from file ───────────────────────────────────────────
+# ── Run @quiet inherited check files (failures only) ──────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 while IFS= read -r line; do
-    # Skip empty lines
+    [[ "$line" =~ ^@quiet\  ]] || continue
+    qfile="${line#@quiet }"
+    qfile="$PROJECT_DIR/checks/$qfile"
+    [[ -f "$qfile" ]] || { echo "Warning: quiet file not found: $qfile" >&2; continue; }
+    while IFS= read -r qline; do
+        [[ -z "$qline" ]] && continue
+        [[ "$qline" =~ ^# ]] && continue
+        [[ "$qline" =~ ^@ ]] && continue
+        IFS=$'\t' read -r desc cmd flag <<< "$qline"
+        if ssh_run "$cmd" &>/dev/null; then
+            PASS=$((PASS + 1))
+        else
+            echo "  - FAIL (${qfile##*/}): $desc"
+            ERRORS+=("(${qfile##*/}) $desc")
+            FAIL=$((FAIL + 1))
+        fi
+    done < <(sed '/@stop/,$d' "$qfile")
+done < "$CHECKFILE"
+
+# ── Run checks from file (verbose, skip directives) ───────────────
+while IFS= read -r line; do
+    # Skip empty lines and directives
     [[ -z "$line" ]] && continue
+    [[ "$line" =~ ^@ ]] && continue
 
     # Section headers
     if [[ "$line" =~ ^#\  ]]; then

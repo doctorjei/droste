@@ -1,21 +1,15 @@
-# Pacemaker/HA
-crm_mon available	sudo crm_mon --version
-pcs available	test -x /usr/sbin/pcs
-resource agents installed	test -d /usr/lib/ocf/resource.d
-keepalived available	test -x /usr/sbin/keepalived
+@quiet seed.checks
+@quiet seed-lxc.checks
+@quiet fiber.checks
+@quiet fiber-lxc.checks
+@quiet sheet.checks
+@quiet sheet-lxc.checks
+@quiet page.checks
 
-# Cluster
-clush available	clush --version
-
-# Storage
-ceph available	ceph --version
-rbd available	rbd --version
-
-# Networking
-ebtables available	test -x /usr/sbin/ebtables
-
-# Fencing
-fence-agents-common installed	dpkg -s fence-agents-common >/dev/null 2>&1
-
-# PXE
-pxelinux.0 exists	test -f /usr/lib/PXELINUX/pxelinux.0
+# Kernel-dependent (page-lxc additions)
+drbdadm available	command -v drbdadm
+sbd available	command -v sbd
+dlm_controld available	command -v dlm_controld
+iscsiadm available	test -x /usr/sbin/iscsiadm
+targetcli available	command -v targetcli
+multipath available	test -x /usr/sbin/multipathd

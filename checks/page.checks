@@ -1,3 +1,7 @@
+@quiet seed.checks
+@quiet fiber.checks
+@quiet sheet.checks
+
 # Pacemaker/HA
 crm_mon available	crm_mon --version
 pcs available	command -v pcs

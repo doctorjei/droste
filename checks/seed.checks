@@ -32,6 +32,7 @@ locale-gen ran	test -f /usr/lib/locale/locale-archive || locale -a | grep -q en_
 # Sysctl config written
 sysctl droste config	test -f /etc/sysctl.d/99-droste.conf
 
+@stop
 # Excluded packages should NOT be present as explicit installs
 # (some may appear as deps — that's OK, we just verify the seed layer is clean)
 no init package	! dpkg -s init 2>/dev/null | grep -q "^Status: install ok installed"

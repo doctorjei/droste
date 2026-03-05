@@ -1,2 +1,13 @@
-# Gutenberg: empty cap layer on press (no additional packages)
-# All checks inherited from press tier via regression test
+@quiet seed.checks
+@quiet seed-lxc.checks
+@quiet fiber.checks
+@quiet fiber-lxc.checks
+@quiet sheet.checks
+@quiet sheet-lxc.checks
+@quiet page.checks
+@quiet page-lxc.checks
+@quiet tome.checks
+@quiet tome-lxc.checks
+@quiet press.checks
+
+# Empty cap layer — no additional packages

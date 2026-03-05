@@ -328,7 +328,7 @@ resolve_tiers() {
 }
 
 # ── Container support ────────────────────────────────────────────────
-ALL_CONTAINER_TIERS=(seed fiber fiber-lxc sheet sheet-lxc page page-lxc tome tome-lxc press press-lxc gutenberg gutenberg-lxc)
+ALL_CONTAINER_TIERS=(seed seed-lxc fiber fiber-lxc sheet sheet-lxc page page-lxc tome tome-lxc press press-lxc gutenberg gutenberg-lxc)
 # seed-lxc omitted — seed is built by build-seed.sh, seed-lxc is first Containerfile tier
 
 is_container_tier() {
@@ -368,8 +368,31 @@ do_test_container() {
 
     local pass=0 fail=0 errors=()
 
+    # Run @quiet inherited check files (failures only)
+    while IFS= read -r line; do
+        [[ "$line" =~ ^@quiet\  ]] || continue
+        local qfile="${line#@quiet }"
+        qfile="$PROJECT_DIR/checks/$qfile"
+        [[ -f "$qfile" ]] || { echo "Warning: quiet file not found: $qfile" >&2; continue; }
+        while IFS= read -r qline; do
+            [[ -z "$qline" ]] && continue
+            [[ "$qline" =~ ^# ]] && continue
+            [[ "$qline" =~ ^@ ]] && continue
+            IFS=$'\t' read -r desc cmd flag <<< "$qline"
+            if $container_cmd exec "$cname" bash -c "$cmd" &>/dev/null; then
+                pass=$((pass + 1))
+            else
+                echo "  - FAIL (${qfile##*/}): $desc"
+                errors+=("(${qfile##*/}) $desc")
+                fail=$((fail + 1))
+            fi
+        done < <(sed '/@stop/,$d' "$qfile")
+    done < "$checkfile"
+
+    # Run this file's own tests verbosely (skip directives)
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
+        [[ "$line" =~ ^@ ]] && continue
         if [[ "$line" =~ ^#\  ]]; then
             echo "${line#\# }:"
             continue
@@ -562,8 +585,32 @@ do_test_lxc() {
 
     local pass=0 fail=0 errors=()
 
+    # Run @quiet inherited check files (failures only)
+    while IFS= read -r line; do
+        [[ "$line" =~ ^@quiet\  ]] || continue
+        local qfile="${line#@quiet }"
+        qfile="$PROJECT_DIR/checks/$qfile"
+        [[ -f "$qfile" ]] || { echo "Warning: quiet file not found: $qfile" >&2; continue; }
+        while IFS= read -r qline; do
+            [[ -z "$qline" ]] && continue
+            [[ "$qline" =~ ^# ]] && continue
+            [[ "$qline" =~ ^@ ]] && continue
+            IFS=$'\t' read -r desc cmd flag <<< "$qline"
+            if systemd-nspawn -D "$test_dir" --quiet --pipe --register=no \
+                bash -c "$cmd" &>/dev/null; then
+                pass=$((pass + 1))
+            else
+                echo "  - FAIL (${qfile##*/}): $desc"
+                errors+=("(${qfile##*/}) $desc")
+                fail=$((fail + 1))
+            fi
+        done < <(sed '/@stop/,$d' "$qfile")
+    done < "$checkfile"
+
+    # Run this file's own tests verbosely (skip directives)
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
+        [[ "$line" =~ ^@ ]] && continue
         if [[ "$line" =~ ^#\  ]]; then
             echo "${line#\# }:"
             continue

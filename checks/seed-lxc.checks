@@ -1,36 +1,4 @@
-# User
-droste user exists with UID 1000	test "$(id -u droste)" -eq 1000
-droste group	id -gn droste | grep -q droste
-passwordless sudo	sudo -n true
-
-# Core utilities (from seed base)
-curl available	curl --version
-wget available	wget --version
-file available	file --version
-nc available	command -v nc
-socat available	socat -V
-pstree available	pstree --version
-killall available	command -v killall
-hexdump available	hexdump --version
-iproute2 (ip command)	ip -V
-
-# SSH
-openssh-server installed	dpkg -s openssh-server
-openssh-sftp-server installed	test -x /usr/lib/openssh/sftp-server
-ssh-import-id available	command -v ssh-import-id
-
-# Cloud / VM tools (kept in OCI)
-qemu-img available	command -v qemu-img
-cloud-localds available	command -v cloud-localds
-
-# Python
-python3 available	python3 --version
-
-# Locales
-locale-gen ran	test -f /usr/lib/locale/locale-archive || locale -a | grep -q en_US
-
-# Sysctl config written
-sysctl droste config	test -f /etc/sysctl.d/99-droste.conf
+@quiet seed.checks
 
 # Init/systemd packages (added back for kento/LXC boot)
 init installed	dpkg -s init 2>/dev/null | grep -q "^Status: install ok installed"

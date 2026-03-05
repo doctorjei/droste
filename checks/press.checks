@@ -1,3 +1,9 @@
+@quiet seed.checks
+@quiet fiber.checks
+@quiet sheet.checks
+@quiet page.checks
+@quiet tome.checks
+
 # Compilers
 gcc available	command -v gcc
 g++ available	command -v g++

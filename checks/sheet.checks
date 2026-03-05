@@ -1,6 +1,7 @@
+@quiet seed.checks
+@quiet fiber.checks
+
 # Image tools
-qemu-img available	qemu-img --version
-cloud-localds available	cloud-localds --help
 ansible available	ansible --version
 envsubst available	envsubst --version
 mksquashfs available	command -v mksquashfs

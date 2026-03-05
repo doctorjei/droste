@@ -1,29 +1,15 @@
-# Image tools
-qemu-img available	qemu-img --version
-cloud-localds available	cloud-localds --help
-ansible available	ansible --version
-envsubst available	envsubst --version
-mksquashfs available	command -v mksquashfs
+@quiet seed.checks
+@quiet seed-lxc.checks
+@quiet fiber.checks
+@quiet fiber-lxc.checks
+@quiet sheet.checks
 
-# Filesystem tools
-gdisk available	test -x /usr/sbin/gdisk
-parted available	sudo parted --version
-mkfs.btrfs available	test -x /usr/sbin/mkfs.btrfs
-cryptsetup available	test -x /usr/sbin/cryptsetup
-mdadm available	sudo mdadm --version
-mkfs.fat available	test -x /usr/sbin/mkfs.fat
-mount.ntfs available	test -x /usr/sbin/mount.ntfs-3g
-mtools available	command -v mtools
-ncdu available	ncdu -v
-
-# Network diagnostics
-hping3 available	test -x /usr/sbin/hping3
-bmon available	command -v bmon
-nethogs available	test -x /usr/sbin/nethogs
-nicstat available	test -x /usr/bin/nicstat
-ethtool available	test -x /usr/sbin/ethtool
-
-# Hardware/benchmarking
-lshw available	sudo lshw -version
-sysbench available	sysbench --version
-picocom available	picocom --help
+# Kernel-dependent (sheet-lxc additions)
+lvm2 available	test -x /usr/sbin/lvm
+thin_check available	command -v thin_check
+nbd-client available	test -x /usr/sbin/nbd-client
+quota available	command -v quota
+lspci available	command -v lspci
+hdparm available	test -x /usr/sbin/hdparm
+dmidecode available	test -x /usr/sbin/dmidecode
+brctl available	test -x /usr/sbin/brctl

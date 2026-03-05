@@ -134,6 +134,11 @@ apt-get remove -y --purge --allow-remove-essential $EXCLUDE_PKGS
 # Autoremove orphans
 apt-get autoremove -y --purge
 
+# Re-install packages that were collateral damage from autoremove
+# (openssh-server depends on libpam-systemd which was in the exclude list)
+apt-get update
+apt-get install -y --no-install-recommends openssh-server openssh-sftp-server
+
 # Clean apt cache
 apt-get clean
 rm -rf /var/lib/apt/lists/*
@@ -146,6 +151,35 @@ chmod +x "$WORK_DIR/rootfs/tmp/strip.sh"
 echo "Removing LXC-specific packages in chroot..."
 chroot "$WORK_DIR/rootfs" /tmp/strip.sh
 rm -f "$WORK_DIR/rootfs/tmp/strip.sh"
+
+# ── Set up droste user and base config in chroot ──────────────────
+cat > "$WORK_DIR/rootfs/tmp/setup.sh" <<'SETUP_EOF'
+#!/bin/bash
+set -euo pipefail
+
+# Droste user (matches VM provisioning)
+if ! id droste &>/dev/null; then
+    groupadd -g 1000 droste
+    useradd -u 1000 -g droste -m -s /bin/bash droste
+    printf 'droste ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/droste
+    chmod 0440 /etc/sudoers.d/droste
+fi
+
+# Sysctl config (written only — shared kernel in containers)
+printf 'net.ipv4.ip_forward = 1\nnet.ipv6.conf.all.forwarding = 1\n' \
+    > /etc/sysctl.d/99-droste.conf
+
+# Locales
+sed -i '/^# .*UTF-8/{
+    /en_US\|zh_CN\|zh_TW\|hi_IN\|es_ES\|ar_SA\|fr_FR\|bn_IN\|pt_BR\|pt_PT\|id_ID\|ur_PK\|de_DE\|ja_JP\|ko_KR/s/^# //
+}' /etc/locale.gen
+locale-gen
+SETUP_EOF
+chmod +x "$WORK_DIR/rootfs/tmp/setup.sh"
+
+echo "Setting up droste user and base config..."
+chroot "$WORK_DIR/rootfs" /tmp/setup.sh
+rm -f "$WORK_DIR/rootfs/tmp/setup.sh"
 
 # ── Tear down chroot ───────────────────────────────────────────────
 echo "Cleaning up mounts..."

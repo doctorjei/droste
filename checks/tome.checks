@@ -1,3 +1,8 @@
+@quiet seed.checks
+@quiet fiber.checks
+@quiet sheet.checks
+@quiet page.checks
+
 # Virtual networking
 ovs-vsctl available	command -v ovs-vsctl
 

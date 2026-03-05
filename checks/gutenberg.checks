@@ -1,2 +1,8 @@
-# Stuffinator: empty cap layer on stuffer (no additional packages)
-# All checks inherited from stuffer tier via regression test
+@quiet seed.checks
+@quiet fiber.checks
+@quiet sheet.checks
+@quiet page.checks
+@quiet tome.checks
+@quiet press.checks
+
+# Empty cap layer on press — no additional packages

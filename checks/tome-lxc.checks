@@ -1,46 +1,15 @@
-# Virtual networking
-ovs-vsctl available	command -v ovs-vsctl
+@quiet seed.checks
+@quiet seed-lxc.checks
+@quiet fiber.checks
+@quiet fiber-lxc.checks
+@quiet sheet.checks
+@quiet sheet-lxc.checks
+@quiet page.checks
+@quiet page-lxc.checks
+@quiet tome.checks
 
-# Packet analysis
-tshark available	command -v tshark
-tcpreplay available	command -v tcpreplay
-
-# Network scanning
-nmap available	command -v nmap
-arp-scan available	test -x /usr/sbin/arp-scan
-
-# Load balancing
-haproxy available	test -x /usr/sbin/haproxy
-
-# Hardware management
-ipmitool available	command -v ipmitool
-
-# Benchmarking
-fio available	command -v fio
-stress-ng available	command -v stress-ng
-ab available	command -v ab
-iperf3 available	command -v iperf3
-
-# Disk/storage tools
-blktrace available	test -x /usr/sbin/blktrace
-xorriso available	command -v xorriso
-
-# Routing
-bird available	test -x /usr/sbin/bird
-
-# Container ecosystem
-buildah available	command -v buildah
-skopeo available	command -v skopeo
-
-# Observability
-prometheus-node-exporter available	test -x /usr/bin/prometheus-node-exporter
-lnav available	command -v lnav
-
-# Database clients
-psql available	command -v psql
-redis-cli available	command -v redis-cli
-
-# Security
-lynis available	test -x /usr/sbin/lynis
-aide available	command -v aide
-auditctl available	test -x /usr/sbin/auditctl
+# Kernel-dependent (tome-lxc additions)
+sg_inq available	command -v sg_inq
+smartctl available	test -x /usr/sbin/smartctl
+aa-status available	command -v aa-status
+qemu-system-arm available	command -v qemu-system-arm
