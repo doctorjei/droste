@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'containers/**'
-      - 'lxc/seed-target.txt'
+      - 'containers/droste-seed/seed-target.txt'
       - 'oci/seed-oci-exclude.txt'
   workflow_dispatch:
 

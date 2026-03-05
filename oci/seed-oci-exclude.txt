@@ -1,11 +1,11 @@
-# OCI seed exclusions: packages from lxc/seed-target.txt that are excluded
-# from the OCI base image.
+# OCI seed exclusions: packages from containers/droste-seed/seed-target.txt
+# that are excluded from the OCI base image.
 #
 # Only excludes packages that would pull in systemd, need an init system
 # to function, or have no metadata endpoint in OCI.
 #
-# The OCI base is defined as: seed-target.txt MINUS this file.
-# This keeps OCI in sync with LXC seed automatically.
+# The OCI seed is: genericcloud minus kernel/boot minus this file.
+# build-seed.sh strips both sets in one pass.
 #
 # Updated: 2026-03-04
 
