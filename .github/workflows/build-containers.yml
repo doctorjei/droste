@@ -12,6 +12,10 @@ on:
 env:
   REGISTRY: ghcr.io
 
+# droste-seed is built manually via containers/droste-seed/build-seed.sh
+# (requires root, qemu-nbd, chroot) and pushed to GHCR as :latest.
+# All other tiers are built here from Containerfiles.
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,84 +37,197 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push root
+      # ── seed-lxc (← seed:latest) ─────────────────────────────────
+      - name: Build and push seed-lxc
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: containers/droste-root/Containerfile
+          file: containers/droste-seed-lxc/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-root:latest
-          cache-from: type=gha,scope=root
-          cache-to: type=gha,mode=max,scope=root
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed-lxc:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed-lxc:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:latest
+          cache-from: type=gha,scope=seed-lxc
+          cache-to: type=gha,mode=max,scope=seed-lxc
 
-      - name: Build and push hair
+      # ── fiber (← seed:latest) ────────────────────────────────────
+      - name: Build and push fiber
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: containers/droste-hair/Containerfile
+          file: containers/droste-fiber/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-root:latest
-          cache-from: type=gha,scope=hair
-          cache-to: type=gha,mode=max,scope=hair
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:latest
+          cache-from: type=gha,scope=fiber
+          cache-to: type=gha,mode=max,scope=fiber
 
-      - name: Build and push wool
+      # ── fiber-lxc (← fiber:sha) ──────────────────────────────────
+      - name: Build and push fiber-lxc
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-wool/
-          file: containers/droste-wool/Containerfile
+          context: .
+          file: containers/droste-fiber-lxc/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-wool:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber-lxc:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber-lxc:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:latest
-          cache-from: type=gha,scope=wool
-          cache-to: type=gha,mode=max,scope=wool
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
+          cache-from: type=gha,scope=fiber-lxc
+          cache-to: type=gha,mode=max,scope=fiber-lxc
 
-      - name: Build and push felt
+      # ── sheet (← fiber:sha) ──────────────────────────────────────
+      - name: Build and push sheet
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-felt/
-          file: containers/droste-felt/Containerfile
+          context: .
+          file: containers/droste-sheet/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-felt:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-wool:latest
-          cache-from: type=gha,scope=felt
-          cache-to: type=gha,mode=max,scope=felt
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
+          cache-from: type=gha,scope=sheet
+          cache-to: type=gha,mode=max,scope=sheet
 
-      - name: Build and push amimono
+      # ── sheet-lxc (← sheet:sha) ──────────────────────────────────
+      - name: Build and push sheet-lxc
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-amimono/
-          file: containers/droste-amimono/Containerfile
+          context: .
+          file: containers/droste-sheet-lxc/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-amimono:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet-lxc:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet-lxc:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-felt:latest
-          cache-from: type=gha,scope=amimono
-          cache-to: type=gha,mode=max,scope=amimono
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:${{ github.sha }}
+          cache-from: type=gha,scope=sheet-lxc
+          cache-to: type=gha,mode=max,scope=sheet-lxc
 
-      - name: Build and push stuffer
+      # ── page (← sheet:sha) ───────────────────────────────────────
+      - name: Build and push page
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-stuffer/
-          file: containers/droste-stuffer/Containerfile
+          context: .
+          file: containers/droste-page/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffer:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-amimono:latest
-          cache-from: type=gha,scope=stuffer
-          cache-to: type=gha,mode=max,scope=stuffer
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:${{ github.sha }}
+          cache-from: type=gha,scope=page
+          cache-to: type=gha,mode=max,scope=page
 
-      - name: Build and push stuffinator
+      # ── page-lxc (← page:sha) ────────────────────────────────────
+      - name: Build and push page-lxc
         uses: docker/build-push-action@v6
         with:
-          context: containers/droste-stuffinator/
-          file: containers/droste-stuffinator/Containerfile
+          context: .
+          file: containers/droste-page-lxc/Containerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffinator:latest
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page-lxc:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page-lxc:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffer:latest
-          cache-from: type=gha,scope=stuffinator
-          cache-to: type=gha,mode=max,scope=stuffinator
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:${{ github.sha }}
+          cache-from: type=gha,scope=page-lxc
+          cache-to: type=gha,mode=max,scope=page-lxc
+
+      # ── tome (← page:sha) ────────────────────────────────────────
+      - name: Build and push tome
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-tome/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:${{ github.sha }}
+          cache-from: type=gha,scope=tome
+          cache-to: type=gha,mode=max,scope=tome
+
+      # ── tome-lxc (← tome:sha) ────────────────────────────────────
+      - name: Build and push tome-lxc
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-tome-lxc/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome-lxc:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome-lxc:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:${{ github.sha }}
+          cache-from: type=gha,scope=tome-lxc
+          cache-to: type=gha,mode=max,scope=tome-lxc
+
+      # ── press (← tome:sha) ───────────────────────────────────────
+      - name: Build and push press
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-press/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:${{ github.sha }}
+          cache-from: type=gha,scope=press
+          cache-to: type=gha,mode=max,scope=press
+
+      # ── press-lxc (← press:sha) ──────────────────────────────────
+      - name: Build and push press-lxc
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-press-lxc/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press-lxc:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press-lxc:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:${{ github.sha }}
+          cache-from: type=gha,scope=press-lxc
+          cache-to: type=gha,mode=max,scope=press-lxc
+
+      # ── gutenberg (← press:sha) ──────────────────────────────────
+      - name: Build and push gutenberg
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-gutenberg/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:${{ github.sha }}
+          cache-from: type=gha,scope=gutenberg
+          cache-to: type=gha,mode=max,scope=gutenberg
+
+      # ── gutenberg-lxc (← gutenberg:sha) ──────────────────────────
+      - name: Build and push gutenberg-lxc
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-gutenberg-lxc/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg-lxc:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg-lxc:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:${{ github.sha }}
+          cache-from: type=gha,scope=gutenberg-lxc
+          cache-to: type=gha,mode=max,scope=gutenberg-lxc
