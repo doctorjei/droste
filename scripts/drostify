@@ -28,6 +28,7 @@ Commands:
   vm         Build/test VM images (explicit prefix)
   container  Build/test container images (podman/docker)
   lxc        Build/test LXC rootfs images (chroot + systemd-nspawn)
+  oci-lxc    Manage OCI-backed LXC containers (create/destroy/list/reset)
   help       Show this help message
 
 Images (VM):
@@ -62,6 +63,8 @@ Options:
   --force          Overwrite existing images (required for 'build all')
   --ssh-key FILE   Path to SSH public key (default: auto-detect)
   --ssh-port PORT  Host port for SSH (default: 2222)
+  --verbose        Show full unfiltered build output (container builds)
+  --debug          Alias for --verbose
 
 Examples:
   $(basename "$0")                          # build and test thread (default)
@@ -607,6 +610,7 @@ do_lxc_command() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --force) force=true; shift ;;
+            --verbose|--debug) VERBOSE=true; shift ;;
             *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
         esac
     done
@@ -648,6 +652,7 @@ do_container_command() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --force) force=true; shift ;;
+            --verbose|--debug) VERBOSE=true; shift ;;
             *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
         esac
     done
@@ -695,6 +700,7 @@ do_vm_command() {
             --force)    force=true; shift ;;
             --ssh-key)  SSH_KEY="$2"; shift 2 ;;
             --ssh-port) SSH_PORT="$2"; shift 2 ;;
+            --verbose|--debug) VERBOSE=true; shift ;;
             *)          echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
         esac
     done
@@ -755,6 +761,7 @@ IMAGE="thread"
 FORCE=false
 SSH_KEY=""
 SSH_PORT=2222
+VERBOSE=false
 
 if [[ $# -gt 0 ]]; then
     case "$1" in
@@ -771,6 +778,11 @@ if [[ $# -gt 0 ]]; then
         vm)
             shift
             do_vm_command "$@"
+            exit 0
+            ;;
+        oci-lxc)
+            shift
+            "$SCRIPT_DIR/droste-oci-lxc.sh" "$@"
             exit 0
             ;;
         prereqs|build|test|help|-h|--help)
@@ -820,6 +832,7 @@ while [[ $# -gt 0 ]]; do
         --force)    FORCE=true; shift ;;
         --ssh-key)  SSH_KEY="$2"; shift 2 ;;
         --ssh-port) SSH_PORT="$2"; shift 2 ;;
+        --verbose|--debug) VERBOSE=true; shift ;;
         *)          echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
     esac
 done
