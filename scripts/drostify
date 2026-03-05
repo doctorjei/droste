@@ -28,7 +28,6 @@ Commands:
   vm         Build/test VM images (explicit prefix)
   container  Build/test container images (podman/docker)
   lxc        Build/test LXC rootfs images (chroot + systemd-nspawn)
-  oci-lxc    Manage OCI-backed LXC containers (create/destroy/list/reset)
   help       Show this help message
 
 Images (VM):
@@ -778,11 +777,6 @@ if [[ $# -gt 0 ]]; then
         vm)
             shift
             do_vm_command "$@"
-            exit 0
-            ;;
-        oci-lxc)
-            shift
-            "$SCRIPT_DIR/droste-oci-lxc.sh" "$@"
             exit 0
             ;;
         prereqs|build|test|help|-h|--help)
