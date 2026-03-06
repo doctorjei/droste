@@ -1,0 +1,17 @@
+@quiet seed.checks
+@quiet lint.checks
+@quiet fiber.checks
+@quiet thread.checks
+@quiet sheet.checks
+@quiet yarn.checks
+
+# VM boot files (kento VM mode)
+vmlinuz exists	test -f /boot/vmlinuz
+initramfs.img exists	test -f /boot/initramfs.img
+
+# VM boot readiness
+fstab is empty	test ! -s /etc/fstab
+droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
+droste in sudo group	id -nG droste | grep -qw sudo
+systemd-networkd DHCP config	test -f /etc/systemd/network/80-dhcp.network
+systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service

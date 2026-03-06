@@ -1,50 +1,15 @@
-# VM tools
-qemu-system-x86_64 available	qemu-system-x86_64 --version
-qemu-img available	qemu-img --version
-cloud-localds available	cloud-localds --help
-ansible available	ansible --version
-envsubst available	envsubst --version
-swtpm available	swtpm --version
-OVMF firmware exists	test -f /usr/share/OVMF/OVMF_CODE_4M.fd
-gdisk available	test -x /usr/sbin/gdisk
-virsh available	virsh --version
-virt-install available	virt-install --version
-nbdkit available	nbdkit --version
-lvm available	sudo lvm version
-mdadm available	sudo mdadm --version
-parted available	sudo parted --version
-mkfs.btrfs available	test -x /usr/sbin/mkfs.btrfs
-cryptsetup available	test -x /usr/sbin/cryptsetup
-quota available	command -v quota
+@quiet seed.checks
+@quiet lint.checks
+@quiet fiber.checks
+@quiet thread.checks
+@quiet sheet.checks
+
+# Kernel-dependent (yarn additions)
+lvm2 available	test -x /usr/sbin/lvm
+thin_check available	command -v thin_check
 nbd-client available	test -x /usr/sbin/nbd-client
-exportfs available	test -x /usr/sbin/exportfs
-lspci available	lspci --version
-picocom available	picocom --help
-mount.ntfs available	test -x /usr/sbin/mount.ntfs-3g
-mkfs.fat available	test -x /usr/sbin/mkfs.fat
-mtools available	command -v mtools
+quota available	command -v quota
+lspci available	command -v lspci
 hdparm available	test -x /usr/sbin/hdparm
 dmidecode available	test -x /usr/sbin/dmidecode
-lshw available	sudo lshw -version
-ncdu available	ncdu -v
-kvm-ok available	test -x /usr/sbin/kvm-ok
-nethogs available	test -x /usr/sbin/nethogs
-bmon available	command -v bmon
-hping3 available	test -x /usr/sbin/hping3
-mksquashfs available	command -v mksquashfs
-irqbalance available	test -x /usr/sbin/irqbalance
-cpupower available	command -v cpupower
-ethtool available	test -x /usr/sbin/ethtool
-nicstat available	test -x /usr/bin/nicstat
 brctl available	test -x /usr/sbin/brctl
-thin_check available	test -x /usr/sbin/thin_check
-sysbench available	sysbench --version
-
-# Nested virt config
-kvm-nested.conf exists	test -f /etc/modprobe.d/kvm-nested.conf
-kvm_intel nested=1	grep -q 'options kvm_intel nested=1' /etc/modprobe.d/kvm-nested.conf
-kvm_amd nested=1	grep -q 'options kvm_amd nested=1' /etc/modprobe.d/kvm-nested.conf
-
-# Module autoload
-droste.conf exists	test -f /etc/modules-load.d/droste.conf
-nbd module configured	grep -q 'nbd' /etc/modules-load.d/droste.conf

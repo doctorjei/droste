@@ -6,7 +6,7 @@
 # creates the droste user, and imports the result as an OCI image.
 #
 # droste-seed is the shared OCI core: everything in the genericcloud image that
-# works in plain OCI containers. droste-seed-lxc layers on top to add
+# works in plain OCI containers. droste-lint layers on top to add
 # init/systemd back for kento (OCI-backed LXC system containers).
 #
 # Usage:
@@ -329,7 +329,7 @@ rm -rf "$WORK_DIR/boot/"*
 rm -rf "$WORK_DIR/lib/modules/"*
 
 # Clear stale fstab from genericcloud (UUID-based mounts for partitions that
-# don't exist in containers, and cause boot failures in -vm images)
+# don't exist in containers, and cause boot failures in VM-bootable images)
 printf '# Empty — no block devices in OCI base\n' > "$WORK_DIR/etc/fstab"
 
 # ── Import into container engine ────────────────────────────────────

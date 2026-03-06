@@ -6,28 +6,15 @@ Nested virtualization images for testing infrastructure operations — container
 
 | Format | Base | Use case | Init | Kernel |
 |--------|------|----------|------|--------|
-| **VM** | genericcloud qcow2 | Full nested virt, hardware passthrough | systemd | Own kernel |
 | **OCI** | genericcloud → seed | Process containers, CI/CD | None | Host kernel |
-| **LXC-OCI** | OCI + init/systemd | System containers via [kento](https://pypi.org/project/kento/) | systemd | Host kernel |
+| **System OCI** | OCI + init/systemd | System containers via [kento](https://pypi.org/project/kento/) | systemd | Host kernel |
+| **VM OCI** | System OCI + kernel | VM boot via [kento](https://pypi.org/project/kento/) VM mode | systemd | Own kernel |
 
 ## Tiers
 
-Each tier builds on the previous one. Pick the smallest that has what you need.
+Each tier builds on the previous one. Three lines: paper (light), cloth (medium), wool (heavy).
 
-### VM Tiers (textile metaphor)
-
-| Tier | Based on | Focus | Size |
-|------|----------|-------|------|
-| **thread** | debian-13-genericcloud | Basic tools, containers, networking | 368 MB |
-| **yarn** | thread | VM management, storage, nested virt | 559 MB |
-| **fabric** | yarn | HA clustering, DRBD, iSCSI, Ceph | 1.1 GB |
-| **tapestry** | fabric | Testing, benchmarking, security, observability | 1.3 GB |
-| **loom** | tapestry | C/C++ development toolchain | 1.5 GB |
-| **jacquard** | loom | Proxmox VE (PVE kernel, ZFS, corosync) | 2.2 GB |
-
-### OCI Tiers (paper/publishing metaphor)
-
-Process containers (no init, for CI/application use):
+### App Tiers — paper/publishing (process containers)
 
 | Tier | Based on | Focus | Size |
 |------|----------|-------|------|
@@ -39,21 +26,33 @@ Process containers (no init, for CI/application use):
 | **press** | tome | C/C++ development toolchain | 3.89 GB |
 | **gutenberg** | press | Empty cap layer | 3.89 GB |
 
-System containers (`-lxc` variants, bootable via [kento](https://pypi.org/project/kento/)):
+### System Tiers — cloth/weaving (bootable via [kento](https://pypi.org/project/kento/))
 
 | Tier | Based on | Focus | Size |
 |------|----------|-------|------|
-| **seed-lxc** | seed | Bootable seed (systemd PID 1) | 553 MB |
-| **fiber-lxc** | fiber | + kernel-dependent tools | 1.16 GB |
-| **sheet-lxc** | sheet | + lvm2, pciutils, nbd-client | 1.77 GB |
-| **page-lxc** | page | + drbd, iscsi, multipath | 2.25 GB |
-| **tome-lxc** | tome | + sg3-utils, smartmontools, qemu-arm | 3.44 GB |
-| **press-lxc** | press | Same kernel packages as tome-lxc | 4.17 GB |
-| **gutenberg-lxc** | gutenberg | Same kernel packages as tome-lxc | 4.17 GB |
+| **lint** | seed | Bootable seed (systemd PID 1) | 553 MB |
+| **thread** | fiber | + kernel-dependent tools | 1.16 GB |
+| **yarn** | sheet | + lvm2, pciutils, nbd-client | 1.77 GB |
+| **fabric** | page | + drbd, iscsi, multipath | 2.25 GB |
+| **tapestry** | tome | + sg3-utils, smartmontools, qemu-arm | 3.44 GB |
+| **loom** | press | Same kernel packages as tapestry | 4.17 GB |
+| **jacquard** | gutenberg | Same kernel packages as tapestry | 4.17 GB |
 
-Each `-lxc` variant adds init/systemd (21 packages) plus cumulative kernel-dependent packages that work in system containers but not process containers. No jacquard equivalent exists for OCI (hypervisor stack requires its own kernel).
+### VM Tiers — wool (VM-bootable via kento VM mode)
 
-Pick the smallest tier that has what you need. Most container and networking work only needs **thread** / **fiber**. VM-in-VM testing needs **yarn**. Cluster or HA testing needs **fabric** / **page**.
+| Tier | Based on | Focus |
+|------|----------|-------|
+| **root** | lint | VM-bootable seed |
+| **hair** | thread | VM-bootable fiber |
+| **wool** | yarn | VM-bootable sheet |
+| **felt** | fabric | VM-bootable page |
+| **amimono** | tapestry | VM-bootable tome |
+| **stuffer** | loom | VM-bootable press |
+| **stuffinator** | jacquard | VM-bootable gutenberg |
+
+Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Each VM tier adds /boot/vmlinuz + initramfs, password, and DHCP config on top of its system sibling.
+
+Pick the smallest tier that has what you need. Most container and networking work only needs **fiber** / **thread**. VM-in-VM testing needs **sheet**. Cluster or HA testing needs **page** / **fabric**.
 
 Each image includes a `droste` user (UID 1000) with passwordless sudo. SSH key
 injection via cloud-init is required on first boot -- there is no login password.

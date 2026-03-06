@@ -1,102 +1,18 @@
-# User
-droste user exists with UID 1000	test "$(id -u droste)" -eq 1000
-droste group	id -gn droste | grep -q droste
-passwordless sudo	sudo -n true
+@quiet seed.checks
+@quiet lint.checks
+@quiet fiber.checks
 
-# Containers
-lxc-create available	lxc-create --version
-podman available	podman --version
-podman info runs	podman info --format '{{.Host.OS}}'
-fuse-overlayfs available	fuse-overlayfs --version
-slirp4netns available	slirp4netns --version
-systemd-nspawn available	command -v systemd-nspawn
-machinectl available	command -v machinectl
-
-# Networking
-iproute2 (ip command)	ip -V
-dnsmasq available	test -x /usr/sbin/dnsmasq
-nftables available	sudo nft --version
-ipcalc available	ipcalc --version
+# Kernel-dependent (thread additions)
 ipvsadm available	test -x /usr/sbin/ipvsadm
-IPv4 forwarding enabled	test $(cat /proc/sys/net/ipv4/ip_forward) -eq 1
-IPv6 forwarding enabled	test $(cat /proc/sys/net/ipv6/conf/all/forwarding) -eq 1
-
-# Utilities
-curl available	curl --version
-jq available	jq --version
-rsync available	rsync --version
-tmux available	tmux -V
-smbclient available	smbclient --version
-git available	git --version
-wget available	wget --version
-make available	make --version
-file available	file --version
-nc available	command -v nc
-dig available	dig -v
-tree available	tree --version
-unzip available	unzip -v
-zip available	zip --version
-pipx available	pipx --version
-htop available	htop --version
-patch available	patch --version
-bc available	echo quit | bc
-telnet available	command -v telnet
-ssh-import-id available	command -v ssh-import-id
 molly-guard available	test -x /usr/lib/molly-guard/molly-guard
-debootstrap available	test -x /usr/sbin/debootstrap
-sshpass available	sshpass -V
-xmlstarlet available	xmlstarlet --version
-lsof available	lsof -v
-strace available	strace --version
-sar available	sar -V
-iotop available	test -x /usr/sbin/iotop
-iftop available	test -x /usr/sbin/iftop
-pstree available	pstree --version
-killall available	command -v killall
-expect available	expect -v
-sponge available	command -v sponge
-ts available	command -v ts
-rename available	command -v rename
-entr available	command -v entr
-jo available	jo -v
-whois available	command -v whois
-sqlite3 available	sqlite3 --version
-atop available	atop -V
-etckeeper available	command -v etckeeper
-tftpd available	test -x /usr/sbin/in.tftpd
 mount.cifs available	test -x /usr/sbin/mount.cifs
 nfs client available	test -x /usr/sbin/mount.nfs
-sshfs available	sshfs --version
-getfacl available	getfacl --version
-getfattr available	getfattr --version
-wg available	wg --version
-socat available	socat -V
-fping available	fping --version
-arping available	command -v arping
-parallel available	parallel --version
-watchdog available	test -x /usr/sbin/watchdog || dpkg -s proxmox-ve >/dev/null 2>&1
-dnstop available	command -v dnstop
 fatrace available	test -x /usr/sbin/fatrace
-crudini available	crudini --version
 lxcfs available	command -v lxcfs
-inotifywait available	command -v inotifywait
-conntrack available	sudo conntrack --version
-ipset available	test -x /usr/sbin/ipset
-ltrace available	ltrace --version
-pv available	pv --version
-hexdump available	hexdump --version
-xxd available	xxd --version
-strings available	strings --help
-httpd available	command -v httpd
 
-# System
-sshd running	sudo systemctl is-active ssh
-root login disabled	grep -q '^PermitRootLogin no' /etc/ssh/sshd_config
-password auth enabled	grep -q '^PasswordAuthentication yes' /etc/ssh/sshd_config
-machine-id populated (cloud-init ran)	test -s /etc/machine-id
-qemu-guest-agent available	test -x /usr/sbin/qemu-ga
+# Sysctl (config file, not runtime)
+IPv4 forwarding configured	grep -q 'net.ipv4.ip_forward = 1' /etc/sysctl.d/99-droste.conf
+IPv6 forwarding configured	grep -q 'net.ipv6.conf.all.forwarding = 1' /etc/sysctl.d/99-droste.conf
 
-# Rootless Podman
-subuid configured	grep -q '^droste:' /etc/subuid
-subgid configured	grep -q '^droste:' /etc/subgid
-storage.conf exists	test -f /home/droste/.config/containers/storage.conf
+# Podman extras
+podman info runs	podman info --format '{{.Host.OS}}'

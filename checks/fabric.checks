@@ -1,33 +1,15 @@
-# DRBD
-drbdadm available	test -x /usr/sbin/drbdadm
-drbd module configured	grep -q 'drbd' /etc/modules-load.d/droste.conf
+@quiet seed.checks
+@quiet lint.checks
+@quiet fiber.checks
+@quiet thread.checks
+@quiet sheet.checks
+@quiet yarn.checks
+@quiet page.checks
 
-# Pacemaker/HA
-crm_mon available	sudo crm_mon --version
-pcs available	test -x /usr/sbin/pcs
-resource agents installed	test -d /usr/lib/ocf/resource.d
-sbd available	test -x /usr/sbin/sbd
-fence_virsh available	test -x /usr/sbin/fence_virsh
-keepalived available	test -x /usr/sbin/keepalived
-
-# Cluster
-dlm_controld available	test -x /usr/sbin/dlm_controld
-clush available	clush --version
-
-# iSCSI
+# Kernel-dependent (fabric additions)
+drbdadm available	command -v drbdadm
+sbd available	command -v sbd
+dlm_controld available	command -v dlm_controld
 iscsiadm available	test -x /usr/sbin/iscsiadm
 targetcli available	command -v targetcli
-
-# Storage
-ceph available	ceph --version
-rbd available	rbd --version
 multipath available	test -x /usr/sbin/multipathd
-
-# Networking
-ebtables available	test -x /usr/sbin/ebtables
-
-# PXE
-pxelinux.0 exists	test -f /usr/lib/PXELINUX/pxelinux.0 || dpkg -s proxmox-ve >/dev/null 2>&1
-
-# System
-numactl available	numactl --show

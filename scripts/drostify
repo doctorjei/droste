@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Build, test, and manage droste images.
+# Build, test, and manage droste OCI images.
 #
 # Usage:
-#   scripts/drostify                            # build and test droste-thread
-#   scripts/drostify build thread               # just build droste-thread
-#   scripts/drostify test yarn                  # boot and smoke test droste-yarn
-#   scripts/drostify build all --force          # rebuild all tiers
+#   scripts/drostify build fiber              # build fiber OCI
+#   scripts/drostify build all --force        # rebuild all tiers
+#   scripts/drostify test sheet               # test sheet OCI
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,358 +14,69 @@ trap 'echo ""; echo "--- drostify finished at $(date "+%Y-%m-%d %H:%M:%S") ---"'
 
 # ── Globals ─────────────────────────────────────────────────────────
 declare -A FORCE_TIERS=()
+VERBOSE=false
 
-# ── Usage ───────────────────────────────────────────────────────────
-usage() {
-    cat <<EOF
-Usage: $(basename "$0") [COMMAND] [IMAGE] [OPTIONS]
+# ── Tier name registry ──────────────────────────────────────────────
+# Index-aligned: LAYER_APP[i], LAYER_SYS[i], LAYER_VM[i] are siblings.
+# Parent chain: app[0] → app[1] → ... → app[6] (process containers)
+#               sys[i] is the system container child of app[i]
+#               vm[i] is the VM-bootable child of sys[i]
+#
+# To rename tiers, change ONLY these three arrays. Everything else
+# (tier lists, parent mappings, parsers, help text) derives from them.
+LAYER_APP=(seed  fiber   sheet  page    tome      press    gutenberg)
+LAYER_SYS=(lint  thread  yarn   fabric  tapestry  loom     jacquard)
+LAYER_VM=(root   hair    wool   felt    amimono   stuffer  stuffinator)
 
-Build and test droste images.
+# ── Derived tier arrays ─────────────────────────────────────────────
+ALL_OCI_APP_TIERS=("${LAYER_APP[@]}")
+ALL_OCI_SYS_TIERS=("${LAYER_SYS[@]}")
+ALL_OCI_VM_TIERS=("${LAYER_VM[@]}")
 
-Commands:
-  prereqs    Check build host prerequisites
-  build      Build the image(s) with Packer (or container engine)
-  test       Boot existing image(s) and run smoke tests
-  all        Prereqs + build + test (default)
-  vm         Build/test VM images (explicit prefix)
-  oci        Build/test OCI container images (podman/docker)
-  build-all  Build all images (OCI + VM)
-  help       Show this help message
+# Interleaved build order: app[i], sys[i], vm[i] for each layer.
+# This is also the correct dependency order and downstream order.
+ALL_OCI_TIERS=()
+for _i in "${!LAYER_APP[@]}"; do
+    ALL_OCI_TIERS+=("${LAYER_APP[$_i]}" "${LAYER_SYS[$_i]}" "${LAYER_VM[$_i]}")
+done
+unset _i
 
-Images (VM):
-  thread     Container-ready base image (default)
-  yarn       VM-capable image (builds on top of thread)
-  fabric     HA/storage/cluster image (builds on top of yarn)
-  tapestry   Testing/benchmarking/security image (builds on top of fabric)
-  loom       Development/build toolchain image (builds on top of tapestry)
-  jacquard   Proxmox VE testing environment (builds on top of loom)
-  all        All tiers
-
-Images (OCI):
-  seed         OCI base (unified base, built by build-seed.sh)
-  seed-lxc     Bootable seed (kento system container)
-  seed-vm      VM-bootable seed (kento VM mode)
-  fiber        Container base (thread equivalent)
-  fiber-lxc    Bootable fiber (kento system container)
-  fiber-vm     VM-bootable fiber (kento VM mode)
-  sheet        VM tooling layer (yarn equivalent)
-  sheet-lxc    Bootable sheet (kento system container)
-  sheet-vm     VM-bootable sheet (kento VM mode)
-  page         HA/cluster layer (fabric equivalent)
-  page-lxc     Bootable page (kento system container)
-  page-vm      VM-bootable page (kento VM mode)
-  tome         Testing/security layer (tapestry equivalent)
-  tome-lxc     Bootable tome (kento system container)
-  tome-vm      VM-bootable tome (kento VM mode)
-  press        Dev toolchain (loom equivalent)
-  press-lxc    Bootable press (kento system container)
-  press-vm     VM-bootable press (kento VM mode)
-  gutenberg    Empty cap layer on press
-  gutenberg-lxc  Bootable gutenberg (kento system container)
-  gutenberg-vm   VM-bootable gutenberg (kento VM mode)
-  app-all      All app/process containers (non-lxc tiers only)
-  sys-all      All system containers (-lxc tiers only)
-  vm-all       All VM-bootable containers (-vm tiers only)
-  all          All OCI tiers (app + sys + vm)
-
-Bare tier names are auto-detected — no overlap between VM and OCI names.
-
-Options:
-  --force            Rebuild named tier(s) even if images exist
-  --force-cascade    Rebuild named tier(s) and all downstream dependents
-  --ssh-key FILE     Path to SSH public key (default: auto-detect)
-  --ssh-port PORT    Host port for SSH (default: 2222)
-  --verbose          Show full build output (builds are quiet by default)
-  --debug            Alias for --verbose
-
-Examples:
-  $(basename "$0")                          # build and test thread (default)
-  $(basename "$0") build thread             # just build thread
-  $(basename "$0") test yarn                # smoke test yarn
-  $(basename "$0") test all                 # smoke test all tiers
-  $(basename "$0") build all --force        # build all VM tiers (overwrite)
-  $(basename "$0") test yarn --ssh-key ~/.ssh/id_ed25519.pub
-  $(basename "$0") build fiber              # build fiber OCI (auto-detected)
-  $(basename "$0") build fiber-lxc          # build bootable fiber for kento
-  $(basename "$0") test sheet               # test sheet OCI (auto-detected)
-  $(basename "$0") vm build thread          # explicit VM prefix
-  $(basename "$0") vm test yarn             # explicit VM prefix
-  $(basename "$0") oci build fiber          # explicit OCI prefix
-  $(basename "$0") oci test sheet           # explicit OCI prefix
-  $(basename "$0") oci build all            # build all OCI tiers
-  $(basename "$0") oci build app-all        # build all app/process containers
-  $(basename "$0") oci build sys-all        # build all system containers
-  $(basename "$0") oci build sheet --force-cascade  # rebuild sheet + all downstream
-  $(basename "$0") build-all               # build all OCI + VM images
-  $(basename "$0") build-all --force       # rebuild everything
-EOF
-}
-
-# ── Prereqs ─────────────────────────────────────────────────────────
-do_prereqs() {
-    echo "Checking prerequisites..."
-    echo ""
-    "$SCRIPT_DIR/check-prereqs.sh"
-}
-
-# ── Test (uses global SSH_KEY, SSH_PORT) ─────────────────────────────
-do_test() {
-    local image_type="$1"
-
-    local image
-    case "$image_type" in
-        thread)   image="$PROJECT_DIR/output-droste-thread/droste-thread.qcow2" ;;
-        yarn)     image="$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2" ;;
-        fabric)   image="$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2" ;;
-        tapestry) image="$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2" ;;
-        loom)     image="$PROJECT_DIR/output-droste-loom/droste-loom.qcow2" ;;
-        jacquard) image="$PROJECT_DIR/output-droste-jacquard/droste-jacquard.qcow2" ;;
-    esac
-
-    if [[ ! -f "$image" ]]; then
-        echo "Error: image not found at $image" >&2
-        echo "Run '$(basename "$0") build $image_type' first." >&2
-        exit 1
-    fi
-
-    local private_key="${SSH_KEY%.pub}"
-    if [[ ! -f "$private_key" ]]; then
-        echo "Error: private key not found: $private_key" >&2
-        exit 1
-    fi
-
-    echo "Booting image for smoke test..."
-    echo ""
-
-    # Kill any stale QEMU from a previous run
-    local work_dir="${XDG_CACHE_HOME:-$HOME/.cache}/droste-boot"
-    local pidfile="${work_dir}/droste.pid"
-    if [[ -f "$pidfile" ]]; then
-        kill "$(cat "$pidfile")" 2>/dev/null || true
-        rm -f "$pidfile"
-    fi
-    rm -f "${work_dir}/droste-ephemeral.qcow2"
-
-    # Boot in background
-    "$SCRIPT_DIR/boot-droste.sh" \
-        --ssh-key "$SSH_KEY" \
-        --ssh-port "$SSH_PORT" \
-        --image "$image" \
-        --daemonize
-
-    # Wait for SSH to become available
-    echo "Waiting for SSH..."
-    local retries=30
-    while ! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-              -o LogLevel=ERROR -o ConnectTimeout=2 \
-              -p "$SSH_PORT" -i "$private_key" droste@localhost true &>/dev/null; do
-        ((retries--))
-        if [[ $retries -le 0 ]]; then
-            echo "Error: SSH did not become available" >&2
-            exit 1
-        fi
-        sleep 2
-    done
-    echo "SSH is up."
-    echo ""
-
-    # Run smoke tests for this tier
-    "$SCRIPT_DIR/ssh-smoke-test.sh" \
-        --port "$SSH_PORT" \
-        --ssh-key "$private_key" \
-        "$PROJECT_DIR/checks/${image_type}.checks"
-
-    # Clean up — kill QEMU
-    pidfile="${XDG_CACHE_HOME:-$HOME/.cache}/droste-boot/droste.pid"
-    if [[ -f "$pidfile" ]]; then
-        kill "$(cat "$pidfile")" 2>/dev/null || true
-        rm -f "$pidfile"
-    fi
-
-    echo ""
-    echo "Test complete. VM stopped."
-}
-
-# ── Build functions ──────────────────────────────────────────────────
-# Every build function runs SSH tests immediately after building.
-
-do_build_thread() {
-    echo "Building droste-thread image..."
-    echo ""
-
-    cd "$PROJECT_DIR/packer/droste-thread"
-    packer init .
-    packer build -force droste-thread.pkr.hcl
-
-    echo ""
-    echo "Build complete."
-    ls -lh "$PROJECT_DIR/output-droste-thread/droste-thread.qcow2"
-    echo ""
-    do_test thread
-}
-
-do_build_yarn() {
-    echo "Building droste-yarn image (on top of droste-thread)..."
-    echo ""
-
-    local base_image="$PROJECT_DIR/output-droste-thread/droste-thread.qcow2"
-    cd "$PROJECT_DIR/packer/droste-yarn"
-    packer init .
-    packer build -force -var "base_image=$base_image" droste-yarn.pkr.hcl
-
-    echo ""
-    echo "Build complete."
-    ls -lh "$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2"
-    ls -lh "$PROJECT_DIR/output-droste-yarn/droste-yarn-diff.qcow2"
-    echo ""
-    do_test yarn
-}
-
-do_build_fabric() {
-    echo "Building droste-fabric image (on top of droste-yarn)..."
-    echo ""
-
-    local base_image="$PROJECT_DIR/output-droste-yarn/droste-yarn.qcow2"
-    cd "$PROJECT_DIR/packer/droste-fabric"
-    packer init .
-    packer build -force -var "base_image=$base_image" droste-fabric.pkr.hcl
-
-    echo ""
-    echo "Build complete."
-    ls -lh "$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2"
-    ls -lh "$PROJECT_DIR/output-droste-fabric/droste-fabric-diff.qcow2"
-    echo ""
-    do_test fabric
-}
-
-do_build_tapestry() {
-    echo "Building droste-tapestry image (on top of droste-fabric)..."
-    echo ""
-
-    local base_image="$PROJECT_DIR/output-droste-fabric/droste-fabric.qcow2"
-    cd "$PROJECT_DIR/packer/droste-tapestry"
-    packer init .
-    packer build -force -var "base_image=$base_image" droste-tapestry.pkr.hcl
-
-    echo ""
-    echo "Build complete."
-    ls -lh "$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2"
-    ls -lh "$PROJECT_DIR/output-droste-tapestry/droste-tapestry-diff.qcow2"
-    echo ""
-    do_test tapestry
-}
-
-do_build_loom() {
-    echo "Building droste-loom image (on top of droste-tapestry)..."
-    echo ""
-
-    local base_image="$PROJECT_DIR/output-droste-tapestry/droste-tapestry.qcow2"
-    cd "$PROJECT_DIR/packer/droste-loom"
-    packer init .
-    packer build -force -var "base_image=$base_image" droste-loom.pkr.hcl
-
-    echo ""
-    echo "Build complete."
-    ls -lh "$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
-    ls -lh "$PROJECT_DIR/output-droste-loom/droste-loom-diff.qcow2"
-    echo ""
-    do_test loom
-}
-
-do_build_jacquard() {
-    echo "Building droste-jacquard image (on top of droste-loom)..."
-    echo ""
-
-    local base_image="$PROJECT_DIR/output-droste-loom/droste-loom.qcow2"
-    cd "$PROJECT_DIR/packer/droste-jacquard"
-    packer init .
-    packer build -force -var "base_image=$base_image" droste-jacquard.pkr.hcl
-
-    echo ""
-    echo "Build complete."
-    ls -lh "$PROJECT_DIR/output-droste-jacquard/droste-jacquard.qcow2"
-    ls -lh "$PROJECT_DIR/output-droste-jacquard/droste-jacquard-diff.qcow2"
-    echo ""
-    do_test jacquard
-}
-
-do_build_image() {
-    local tier="$1"
-
-    # Skip if image exists and tier is not forced
-    if [[ -z "${FORCE_TIERS[$tier]+x}" ]]; then
-        local img="$PROJECT_DIR/output-droste-${tier}/droste-${tier}.qcow2"
-        if [[ -f "$img" ]]; then
-            echo "droste-${tier}: exists, skipping (use --force to rebuild)"
-            return 0
-        fi
-    fi
-
-    case "$tier" in
-        thread)   do_build_thread ;;
-        yarn)     do_build_yarn ;;
-        fabric)   do_build_fabric ;;
-        tapestry) do_build_tapestry ;;
-        loom)     do_build_loom ;;
-        jacquard) do_build_jacquard ;;
-    esac
-}
-
-# ── VM tier resolution ──────────────────────────────────────────────
-ALL_VM_TIERS=(thread yarn fabric tapestry loom jacquard)
-
-# Return dependency chain: all tiers from thread through target.
-resolve_vm_deps() {
-    local target="$1"
-    for tier in "${ALL_VM_TIERS[@]}"; do
-        echo "$tier"
-        [[ "$tier" == "$target" ]] && break
-    done
-}
-
-# Return target tier + all downstream dependents.
-resolve_vm_downstream() {
-    local from="$1"
-    local found=false
-    for tier in "${ALL_VM_TIERS[@]}"; do
-        [[ "$tier" == "$from" ]] && found=true
-        [[ "$found" == true ]] && echo "$tier"
-    done
-}
-
-# Return tiers to build for a target.
-resolve_vm_tiers() {
-    local target="$1"
-    if [[ "$target" == "all" ]]; then
-        echo "${ALL_VM_TIERS[@]}"
-    else
-        resolve_vm_deps "$target"
-    fi
-}
-
-# Return tiers to build for a force-cascade: deps + downstream.
-resolve_vm_cascade_list() {
-    local target="$1"
-    local -A include
-    local t
-    for t in $(resolve_vm_deps "$target"); do include["$t"]=1; done
-    for t in $(resolve_vm_downstream "$target"); do include["$t"]=1; done
-    for tier in "${ALL_VM_TIERS[@]}"; do
-        [[ -n "${include[$tier]+x}" ]] && echo "$tier"
-    done
-}
-
-# ── OCI support ────────────────────────────────────────────────────
-ALL_OCI_APP_TIERS=(seed fiber sheet page tome press gutenberg)
-ALL_OCI_SYS_TIERS=(seed-lxc fiber-lxc sheet-lxc page-lxc tome-lxc press-lxc gutenberg-lxc)
-ALL_OCI_VM_TIERS=(seed-vm fiber-vm sheet-vm page-vm tome-vm press-vm gutenberg-vm)
-ALL_OCI_TIERS=(seed seed-lxc fiber fiber-lxc sheet sheet-lxc page page-lxc tome tome-lxc press press-lxc gutenberg gutenberg-lxc seed-vm fiber-vm sheet-vm page-vm tome-vm press-vm gutenberg-vm)
-
+# ── Tier helpers ────────────────────────────────────────────────────
 is_oci_tier() {
-    case "$1" in
-        seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all) return 0 ;;
-        *) return 1 ;;
-    esac
+    case "$1" in app-all|sys-all|vm-all) return 0 ;; esac
+    local t
+    for t in "${ALL_OCI_TIERS[@]}"; do
+        [[ "$t" == "$1" ]] && return 0
+    done
+    return 1
+}
+
+is_leaf_tier() {
+    local tier="$1" t
+    for t in "${LAYER_SYS[@]}" "${LAYER_VM[@]}"; do
+        [[ "$t" == "$tier" ]] && return 0
+    done
+    return 1
+}
+
+# Return the parent tier for a given OCI tier.
+oci_parent() {
+    local tier="$1"
+    local i
+    for i in "${!LAYER_APP[@]}"; do
+        if [[ "$tier" == "${LAYER_APP[$i]}" ]]; then
+            [[ $i -gt 0 ]] && echo "${LAYER_APP[$((i-1))]}" || echo ""
+            return
+        fi
+        if [[ "$tier" == "${LAYER_SYS[$i]}" ]]; then
+            echo "${LAYER_APP[$i]}"
+            return
+        fi
+        if [[ "$tier" == "${LAYER_VM[$i]}" ]]; then
+            echo "${LAYER_SYS[$i]}"
+            return
+        fi
+    done
 }
 
 detect_container_cmd() {
@@ -380,33 +90,56 @@ detect_container_cmd() {
     fi
 }
 
-# Return the parent tier for a given OCI tier.
-oci_parent() {
-    case "$1" in
-        seed)           echo "" ;;
-        seed-lxc)       echo "seed" ;;
-        fiber)          echo "seed" ;;
-        fiber-lxc)      echo "fiber" ;;
-        sheet)          echo "fiber" ;;
-        sheet-lxc)      echo "sheet" ;;
-        page)           echo "sheet" ;;
-        page-lxc)       echo "page" ;;
-        tome)           echo "page" ;;
-        tome-lxc)       echo "tome" ;;
-        press)          echo "tome" ;;
-        press-lxc)      echo "press" ;;
-        gutenberg)      echo "press" ;;
-        gutenberg-lxc)  echo "gutenberg" ;;
-        seed-vm)        echo "seed-lxc" ;;
-        fiber-vm)       echo "fiber-lxc" ;;
-        sheet-vm)       echo "sheet-lxc" ;;
-        page-vm)        echo "page-lxc" ;;
-        tome-vm)        echo "tome-lxc" ;;
-        press-vm)       echo "press-lxc" ;;
-        gutenberg-vm)   echo "gutenberg-lxc" ;;
-    esac
+# ── Usage ───────────────────────────────────────────────────────────
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [COMMAND] [IMAGE] [OPTIONS]
+
+Build and test droste OCI images.
+
+Commands:
+  build      Build the image(s)
+  test       Run smoke tests on existing image(s)
+  oci        Build/test OCI container images (explicit prefix)
+  build-all  Build all OCI images
+  help       Show this help message
+
+Images (OCI):
+EOF
+    # Generate tier list from arrays
+    local i
+    for i in "${!LAYER_APP[@]}"; do
+        printf "  %-14s Process container (layer %d)\n" "${LAYER_APP[$i]}" "$i"
+        printf "  %-14s System container (kento)\n" "${LAYER_SYS[$i]}"
+        printf "  %-14s VM-bootable (kento VM mode)\n" "${LAYER_VM[$i]}"
+    done
+    cat <<EOF
+  app-all      All app/process containers
+  sys-all      All system containers
+  vm-all       All VM-bootable containers
+  all          All OCI tiers (app + sys + vm)
+
+Options:
+  --force            Rebuild named tier(s) even if images exist
+  --force-cascade    Rebuild named tier(s) and all downstream dependents
+  --verbose          Show full build output (builds are quiet by default)
+  --debug            Alias for --verbose
+
+Examples:
+  $(basename "$0") build ${LAYER_APP[1]}              # build ${LAYER_APP[1]} OCI
+  $(basename "$0") build ${LAYER_SYS[1]}          # build bootable ${LAYER_SYS[1]} for kento
+  $(basename "$0") test ${LAYER_APP[2]}               # test ${LAYER_APP[2]} OCI
+  $(basename "$0") oci build ${LAYER_APP[1]}           # explicit OCI prefix
+  $(basename "$0") oci build all            # build all OCI tiers
+  $(basename "$0") oci build app-all        # build all app/process containers
+  $(basename "$0") oci build sys-all        # build all system containers
+  $(basename "$0") oci build ${LAYER_APP[2]} --force-cascade  # rebuild ${LAYER_APP[2]} + all downstream
+  $(basename "$0") build-all               # build all OCI images
+  $(basename "$0") build-all --force       # rebuild everything
+EOF
 }
 
+# ── OCI test ────────────────────────────────────────────────────────
 do_test_oci() {
     local tier="$1"
     local image="droste-${tier}"
@@ -485,6 +218,7 @@ do_test_oci() {
     fi
 }
 
+# ── OCI build ───────────────────────────────────────────────────────
 do_build_oci() {
     local tier="$1"
     local container_cmd
@@ -499,10 +233,10 @@ do_build_oci() {
     fi
 
     # seed is built by build-seed.sh (chroot + import), not a Containerfile
-    if [[ "$tier" == "seed" ]]; then
-        echo "Building droste-seed (via build-seed.sh)..."
+    if [[ "$tier" == "${LAYER_APP[0]}" ]]; then
+        echo "Building droste-${tier} (via build-seed.sh)..."
         echo ""
-        "$PROJECT_DIR/containers/droste-seed/build-seed.sh"
+        "$PROJECT_DIR/containers/droste-${tier}/build-seed.sh"
         echo ""
         do_test_oci "$tier"
         return
@@ -555,6 +289,7 @@ do_build_oci() {
     do_test_oci "$tier"
 }
 
+# ── OCI tier resolution ────────────────────────────────────────────
 # Return dependency chain: all ancestors from seed through target.
 resolve_oci_deps() {
     local target="$1"
@@ -571,8 +306,8 @@ resolve_oci_deps() {
 # Return target tier + all downstream dependents.
 resolve_oci_downstream() {
     local from="$1"
-    # -lxc and -vm tiers are leaves — nothing depends on them
-    if [[ "$from" == *-lxc || "$from" == *-vm ]]; then
+    # sys and vm tiers are leaves — nothing depends on them
+    if is_leaf_tier "$from"; then
         echo "$from"
         return
     fi
@@ -618,13 +353,17 @@ do_oci_command() {
     if [[ $# -gt 0 ]]; then
         case "$1" in
             build|test|all) sub_cmd="$1"; shift ;;
-            seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all) oci_image="$1"; shift ;;
+            *)
+                if is_oci_tier "$1"; then
+                    oci_image="$1"; shift
+                fi
+                ;;
         esac
     fi
     if [[ $# -gt 0 ]]; then
-        case "$1" in
-            seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all|all) oci_image="$1"; shift ;;
-        esac
+        if is_oci_tier "$1" || [[ "$1" == "all" ]]; then
+            oci_image="$1"; shift
+        fi
     fi
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -673,105 +412,14 @@ do_oci_command() {
     esac
 }
 
-# ── VM command handler ────────────────────────────────────────────
-do_vm_command() {
-    local sub_cmd="all"
-    local vm_image="thread"
-    local force=false
-    local force_cascade=false
-
-    # Parse: vm [prereqs|build|test|all] [tier] [--force] [--force-cascade] [--ssh-key] [--ssh-port]
-    if [[ $# -gt 0 ]]; then
-        case "$1" in
-            prereqs|build|test|all) sub_cmd="$1"; shift ;;
-            thread|yarn|fabric|tapestry|loom|jacquard) vm_image="$1"; shift ;;
-        esac
-    fi
-    if [[ $# -gt 0 ]]; then
-        case "$1" in
-            thread|yarn|fabric|tapestry|loom|jacquard|all) vm_image="$1"; shift ;;
-        esac
-    fi
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --force)          force=true; shift ;;
-            --force-cascade)  force_cascade=true; force=true; shift ;;
-            --ssh-key)        SSH_KEY="$2"; shift 2 ;;
-            --ssh-port)       SSH_PORT="$2"; shift 2 ;;
-            --verbose|--debug) VERBOSE=true; shift ;;
-            *)                echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
-        esac
-    done
-
-    # Auto-detect SSH key if not provided
-    if [[ -z "$SSH_KEY" ]]; then
-        for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
-            if [[ -f "$candidate" ]]; then
-                SSH_KEY="$candidate"
-                break
-            fi
-        done
-        if [[ -z "$SSH_KEY" ]]; then
-            echo "Error: no SSH public key found. Use --ssh-key FILE." >&2
-            exit 1
-        fi
-        echo "Using SSH key: $SSH_KEY"
-    fi
-
-    # Compute build list and force set
-    local tiers
-    if [[ "$sub_cmd" == "build" || "$sub_cmd" == "all" ]]; then
-        if [[ "$force_cascade" == true && "$vm_image" != "all" ]]; then
-            tiers=$(resolve_vm_cascade_list "$vm_image")
-            for t in $(resolve_vm_downstream "$vm_image"); do
-                FORCE_TIERS["$t"]=1
-            done
-        elif [[ "$force" == true ]]; then
-            tiers=$(resolve_vm_tiers "$vm_image")
-            for t in $tiers; do
-                FORCE_TIERS["$t"]=1
-            done
-        else
-            tiers=$(resolve_vm_tiers "$vm_image")
-        fi
-    fi
-
-    case "$sub_cmd" in
-        prereqs)
-            do_prereqs
-            ;;
-        build)
-            for tier in $tiers; do
-                echo ""
-                do_build_image "$tier"
-            done
-            ;;
-        test)
-            for tier in $(resolve_vm_tiers "$vm_image"); do
-                do_test "$tier"
-            done
-            ;;
-        all)
-            do_prereqs
-            for tier in $tiers; do
-                echo ""
-                do_build_image "$tier"
-            done
-            ;;
-    esac
-}
-
-# ── Build-all command handler (OCI + VM) ──────────────────────────
+# ── Build-all command handler ────────────────────────────────────
 do_build_all_command() {
     local force=false
-    local force_cascade=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --force)          force=true; shift ;;
-            --force-cascade)  force_cascade=true; force=true; shift ;;
-            --ssh-key)        SSH_KEY="$2"; shift 2 ;;
-            --ssh-port)       SSH_PORT="$2"; shift 2 ;;
+            --force-cascade)  force=true; shift ;;
             --verbose|--debug) VERBOSE=true; shift ;;
             *)                echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
         esac
@@ -780,7 +428,6 @@ do_build_all_command() {
     # Mark all tiers as forced if requested
     if [[ "$force" == true ]]; then
         for t in "${ALL_OCI_TIERS[@]}"; do FORCE_TIERS["$t"]=1; done
-        for t in "${ALL_VM_TIERS[@]}"; do FORCE_TIERS["$t"]=1; done
     fi
 
     echo "=== Building all OCI images ==="
@@ -794,40 +441,13 @@ do_build_all_command() {
         echo ""
         do_build_oci "$tier"
     done
-
-    echo ""
-    echo "=== Building all VM images ==="
-
-    # Auto-detect SSH key if not provided
-    if [[ -z "$SSH_KEY" ]]; then
-        for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
-            if [[ -f "$candidate" ]]; then
-                SSH_KEY="$candidate"
-                break
-            fi
-        done
-        if [[ -z "$SSH_KEY" ]]; then
-            echo "Error: no SSH public key found. Use --ssh-key FILE." >&2
-            exit 1
-        fi
-        echo "Using SSH key: $SSH_KEY"
-    fi
-
-    do_prereqs
-    for tier in "${ALL_VM_TIERS[@]}"; do
-        echo ""
-        do_build_image "$tier"
-    done
 }
 
 # ── Parse command and image ──────────────────────────────────────────
-COMMAND="all"
-IMAGE="thread"
+COMMAND="build"
+IMAGE="all"
 FORCE=false
 FORCE_CASCADE=false
-SSH_KEY=""
-SSH_PORT=2222
-VERBOSE=false
 
 if [[ $# -gt 0 ]]; then
     case "$1" in
@@ -836,47 +456,33 @@ if [[ $# -gt 0 ]]; then
             do_oci_command "$@"
             exit 0
             ;;
-        vm)
-            shift
-            do_vm_command "$@"
-            exit 0
-            ;;
         build-all)
             shift
             do_build_all_command "$@"
             exit 0
             ;;
-        prereqs|build|test|help|-h|--help)
+        build|test|help|-h|--help)
             COMMAND="$1"
             shift
             ;;
-        thread|yarn|fabric|tapestry|loom|jacquard|all)
-            IMAGE="$1"
-            shift
-            ;;
-        seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all)
-            IMAGE="$1"
-            shift
-            ;;
         *)
-            echo "Unknown argument: $1" >&2
-            usage >&2
-            exit 1
+            if is_oci_tier "$1" || [[ "$1" == "all" ]]; then
+                IMAGE="$1"
+                shift
+            else
+                echo "Unknown argument: $1" >&2
+                usage >&2
+                exit 1
+            fi
             ;;
     esac
 fi
 
 if [[ $# -gt 0 ]]; then
-    case "$1" in
-        thread|yarn|fabric|tapestry|loom|jacquard|all)
-            IMAGE="$1"
-            shift
-            ;;
-        seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all)
-            IMAGE="$1"
-            shift
-            ;;
-    esac
+    if is_oci_tier "$1" || [[ "$1" == "all" ]]; then
+        IMAGE="$1"
+        shift
+    fi
 fi
 
 # ── Parse global options ─────────────────────────────────────────────
@@ -884,107 +490,41 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --force)          FORCE=true; shift ;;
         --force-cascade)  FORCE_CASCADE=true; FORCE=true; shift ;;
-        --ssh-key)        SSH_KEY="$2"; shift 2 ;;
-        --ssh-port)       SSH_PORT="$2"; shift 2 ;;
         --verbose|--debug) VERBOSE=true; shift ;;
         *)                echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
     esac
 done
 
-# Auto-detect SSH key (skip for OCI tiers and non-build commands)
-if [[ "$COMMAND" != "help" && "$COMMAND" != "-h" && "$COMMAND" != "--help" && "$COMMAND" != "prereqs" ]] && ! is_oci_tier "$IMAGE"; then
-    if [[ -z "$SSH_KEY" ]]; then
-        for candidate in ~/.ssh/id_ed25519.pub ~/.ssh/id_rsa.pub ~/.ssh/id_ecdsa.pub; do
-            if [[ -f "$candidate" ]]; then
-                SSH_KEY="$candidate"
-                break
-            fi
-        done
-        if [[ -z "$SSH_KEY" ]]; then
-            echo "Error: no SSH public key found. Use --ssh-key FILE." >&2
-            exit 1
-        fi
-        echo "Using SSH key: $SSH_KEY"
-    fi
-fi
-
-# ── Populate FORCE_TIERS for legacy dispatch ─────────────────────────
-if is_oci_tier "$IMAGE"; then
-    if [[ "$FORCE_CASCADE" == true ]]; then
-        for t in $(resolve_oci_downstream "$IMAGE"); do
-            FORCE_TIERS["$t"]=1
-        done
-    elif [[ "$FORCE" == true ]]; then
-        case "$IMAGE" in
-            app-all|sys-all|vm-all)
-                for t in $(resolve_oci_tiers "$IMAGE"); do FORCE_TIERS["$t"]=1; done
-                ;;
-            *)
-                FORCE_TIERS["$IMAGE"]=1
-                ;;
-        esac
-    fi
-else
-    if [[ "$FORCE_CASCADE" == true ]]; then
-        for t in $(resolve_vm_downstream "$IMAGE"); do
-            FORCE_TIERS["$t"]=1
-        done
-    elif [[ "$FORCE" == true ]]; then
-        if [[ "$IMAGE" == "all" ]]; then
-            for t in "${ALL_VM_TIERS[@]}"; do FORCE_TIERS["$t"]=1; done
-        else
+# ── Populate FORCE_TIERS ─────────────────────────────────────────────
+if [[ "$FORCE_CASCADE" == true && "$IMAGE" != "all" && "$IMAGE" != "app-all" && "$IMAGE" != "sys-all" && "$IMAGE" != "vm-all" ]]; then
+    for t in $(resolve_oci_downstream "$IMAGE"); do
+        FORCE_TIERS["$t"]=1
+    done
+elif [[ "$FORCE" == true ]]; then
+    case "$IMAGE" in
+        all|app-all|sys-all|vm-all)
+            for t in $(resolve_oci_tiers "$IMAGE"); do FORCE_TIERS["$t"]=1; done
+            ;;
+        *)
             FORCE_TIERS["$IMAGE"]=1
-        fi
-    fi
+            ;;
+    esac
 fi
 
 # ── Main ────────────────────────────────────────────────────────────
 case "$COMMAND" in
-    all)
-        if is_oci_tier "$IMAGE"; then
-            tiers=$(if [[ "$FORCE_CASCADE" == true ]]; then resolve_oci_cascade_list "$IMAGE"; else resolve_oci_tiers "$IMAGE"; fi)
-            for tier in $tiers; do
-                echo ""
-                do_build_oci "$tier"
-            done
-        else
-            do_prereqs
-            tiers=$(if [[ "$FORCE_CASCADE" == true ]]; then resolve_vm_cascade_list "$IMAGE"; else resolve_vm_tiers "$IMAGE"; fi)
-            for tier in $tiers; do
-                echo ""
-                do_build_image "$tier"
-            done
-        fi
-        ;;
-    prereqs)
-        do_prereqs
-        ;;
     build)
-        if is_oci_tier "$IMAGE"; then
-            tiers=$(if [[ "$FORCE_CASCADE" == true ]]; then resolve_oci_cascade_list "$IMAGE"; else resolve_oci_tiers "$IMAGE"; fi)
-            for tier in $tiers; do
-                echo ""
-                do_build_oci "$tier"
-            done
-        else
-            tiers=$(if [[ "$FORCE_CASCADE" == true ]]; then resolve_vm_cascade_list "$IMAGE"; else resolve_vm_tiers "$IMAGE"; fi)
-            for tier in $tiers; do
-                echo ""
-                do_build_image "$tier"
-            done
-        fi
+        tiers=$(if [[ "$FORCE_CASCADE" == true ]]; then resolve_oci_cascade_list "$IMAGE"; else resolve_oci_tiers "$IMAGE"; fi)
+        for tier in $tiers; do
+            echo ""
+            do_build_oci "$tier"
+        done
         ;;
     test)
-        if is_oci_tier "$IMAGE"; then
-            for tier in $(resolve_oci_tiers "$IMAGE"); do
-                echo ""
-                do_test_oci "$tier"
-            done
-        else
-            for tier in $(resolve_vm_tiers "$IMAGE"); do
-                do_test "$tier"
-            done
-        fi
+        for tier in $(resolve_oci_tiers "$IMAGE"); do
+            echo ""
+            do_test_oci "$tier"
+        done
         ;;
     help|-h|--help)
         usage
