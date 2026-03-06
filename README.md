@@ -1,15 +1,14 @@
 # Droste
 
-Nested virtualization images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built on Debian 13 (Trixie) as layered images across three formats: VM (QCOW2), LXC (rootfs tarballs), and OCI (Containerfiles).
+Nested virtualization images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built on Debian 13 (Trixie) as layered images across three formats: VM (QCOW2), OCI (Containerfiles), and LXC-bootable OCI.
 
 ## Image Formats
 
 | Format | Base | Use case | Init | Kernel |
 |--------|------|----------|------|--------|
 | **VM** | genericcloud qcow2 | Full nested virt, hardware passthrough | systemd | Own kernel |
-| **LXC** | genericcloud → seed | System containers, kernel module testing | systemd | Host kernel |
-| **OCI** | genericcloud → seed | Application containers, CI/CD | None | Host kernel |
-| **OCI -lxc** | OCI + init/systemd | System containers via kento | systemd | Host kernel |
+| **OCI** | genericcloud → seed | Process containers, CI/CD | None | Host kernel |
+| **LXC-OCI** | OCI + init/systemd | System containers via [kento](https://pypi.org/project/kento/) | systemd | Host kernel |
 
 ## Tiers
 
