@@ -57,14 +57,6 @@ drostify build root                # build VM-bootable seed
 drostify build vm-all              # build all VM tiers
 ```
 
-### Pushing seed to GHCR
-
-CI workflows pull the seed image from GHCR. Push it after building:
-
-```bash
-scripts/push-seed-to-ghcr.sh
-```
-
 ## Build-All
 
 Build all OCI images in one command:
@@ -118,7 +110,7 @@ section boundary — checks after `@stop` are not included by child tiers.
 
 ```
 checks/              Check files (one per tier, tab-separated)
-scripts/             Build, boot, and test scripts
+scripts/             Build and test scripts (drostify, ssh-smoke-test.sh)
 containers/          OCI Containerfiles (one dir per tier)
   droste-seed/       Seed build script + target package list
   droste-fiber/      Fiber Containerfile (app)

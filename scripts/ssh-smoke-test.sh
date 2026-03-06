@@ -6,7 +6,7 @@
 # and a summary.
 #
 # Usage:
-#   scripts/ssh-smoke-test.sh --port 2222 --ssh-key KEY checks/thread.checks
+#   scripts/ssh-smoke-test.sh --port 2222 --ssh-key KEY checks/lint.checks
 set -euo pipefail
 
 # ── Defaults ────────────────────────────────────────────────────────
