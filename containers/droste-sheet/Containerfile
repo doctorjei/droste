@@ -5,8 +5,8 @@ LABEL description="droste-sheet: VM tooling layer (yarn equivalent)"
 
 USER root
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends \
       ansible gettext-base \
       squashfs-tools cloud-image-utils qemu-utils \
       dosfstools mtools ntfs-3g \

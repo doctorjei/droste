@@ -6,8 +6,8 @@ LABEL description="droste-press-lxc: bootable press (kento system container)"
 USER root
 
 COPY oci/seed-oci-exclude.txt /tmp/seed-oci-exclude.txt
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends \
        $(grep -v '^#' /tmp/seed-oci-exclude.txt | grep -v '^$') \
        ipvsadm molly-guard cifs-utils nfs-common fatrace lxcfs \
        lvm2 thin-provisioning-tools nbd-client quota pciutils hdparm \

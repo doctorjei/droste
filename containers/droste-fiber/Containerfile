@@ -8,8 +8,8 @@ USER root
 # ── Fiber packages (thread equivalent for OCI) ──────────────────
 # Excludes kernel-dependent packages from LXC fiber: ipvsadm, molly-guard,
 # cifs-utils, nfs-common, fatrace, lxcfs (see checks/hair.checks).
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends \
       # Containers
       lxc podman fuse-overlayfs slirp4netns uidmap systemd-container \
       # Networking

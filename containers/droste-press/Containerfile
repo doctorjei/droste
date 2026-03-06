@@ -5,8 +5,8 @@ LABEL description="droste-press: C/C++ development toolchain (loom equivalent)"
 
 USER root
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends \
       build-essential cmake pkg-config \
       autoconf automake libtool \
       gdb valgrind \
