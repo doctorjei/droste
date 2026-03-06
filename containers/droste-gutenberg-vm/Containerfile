@@ -5,3 +5,12 @@ LABEL description="droste-gutenberg-vm: VM-bootable gutenberg (kento VM mode)"
 
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img
+
+# VM boot fixes: clear stale fstab, set login password, enable DHCP
+RUN > /etc/fstab \
+    && echo 'droste:droste' | chpasswd \
+    && usermod -aG sudo droste \
+    && mkdir -p /etc/systemd/network \
+    && printf '[Match]\nName=en*\n\n[Network]\nDHCP=yes\n' \
+       > /etc/systemd/network/80-dhcp.network \
+    && systemctl enable systemd-networkd
