@@ -45,21 +45,29 @@ Images (VM):
 Images (OCI):
   seed         OCI base (unified base, built by build-seed.sh)
   seed-lxc     Bootable seed (kento system container)
+  seed-vm      VM-bootable seed (kento VM mode)
   fiber        Container base (thread equivalent)
   fiber-lxc    Bootable fiber (kento system container)
+  fiber-vm     VM-bootable fiber (kento VM mode)
   sheet        VM tooling layer (yarn equivalent)
   sheet-lxc    Bootable sheet (kento system container)
+  sheet-vm     VM-bootable sheet (kento VM mode)
   page         HA/cluster layer (fabric equivalent)
   page-lxc     Bootable page (kento system container)
+  page-vm      VM-bootable page (kento VM mode)
   tome         Testing/security layer (tapestry equivalent)
   tome-lxc     Bootable tome (kento system container)
+  tome-vm      VM-bootable tome (kento VM mode)
   press        Dev toolchain (loom equivalent)
   press-lxc    Bootable press (kento system container)
+  press-vm     VM-bootable press (kento VM mode)
   gutenberg    Empty cap layer on press
   gutenberg-lxc  Bootable gutenberg (kento system container)
+  gutenberg-vm   VM-bootable gutenberg (kento VM mode)
   app-all      All app/process containers (non-lxc tiers only)
   sys-all      All system containers (-lxc tiers only)
-  all          All OCI tiers (app + sys)
+  vm-all       All VM-bootable containers (-vm tiers only)
+  all          All OCI tiers (app + sys + vm)
 
 Bare tier names are auto-detected — no overlap between VM and OCI names.
 
@@ -349,13 +357,14 @@ resolve_vm_cascade_list() {
 }
 
 # ── OCI support ────────────────────────────────────────────────────
-ALL_OCI_TIERS=(seed seed-lxc fiber fiber-lxc sheet sheet-lxc page page-lxc tome tome-lxc press press-lxc gutenberg gutenberg-lxc)
 ALL_OCI_APP_TIERS=(seed fiber sheet page tome press gutenberg)
 ALL_OCI_SYS_TIERS=(seed-lxc fiber-lxc sheet-lxc page-lxc tome-lxc press-lxc gutenberg-lxc)
+ALL_OCI_VM_TIERS=(seed-vm fiber-vm sheet-vm page-vm tome-vm press-vm gutenberg-vm)
+ALL_OCI_TIERS=(seed seed-lxc fiber fiber-lxc sheet sheet-lxc page page-lxc tome tome-lxc press press-lxc gutenberg gutenberg-lxc seed-vm fiber-vm sheet-vm page-vm tome-vm press-vm gutenberg-vm)
 
 is_oci_tier() {
     case "$1" in
-        seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc|app-all|sys-all) return 0 ;;
+        seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -388,6 +397,13 @@ oci_parent() {
         press-lxc)      echo "press" ;;
         gutenberg)      echo "press" ;;
         gutenberg-lxc)  echo "gutenberg" ;;
+        seed-vm)        echo "seed-lxc" ;;
+        fiber-vm)       echo "fiber-lxc" ;;
+        sheet-vm)       echo "sheet-lxc" ;;
+        page-vm)        echo "page-lxc" ;;
+        tome-vm)        echo "tome-lxc" ;;
+        press-vm)       echo "press-lxc" ;;
+        gutenberg-vm)   echo "gutenberg-lxc" ;;
     esac
 }
 
@@ -555,8 +571,8 @@ resolve_oci_deps() {
 # Return target tier + all downstream dependents.
 resolve_oci_downstream() {
     local from="$1"
-    # -lxc tiers are leaves — nothing depends on them
-    if [[ "$from" == *-lxc ]]; then
+    # -lxc and -vm tiers are leaves — nothing depends on them
+    if [[ "$from" == *-lxc || "$from" == *-vm ]]; then
         echo "$from"
         return
     fi
@@ -574,6 +590,7 @@ resolve_oci_tiers() {
         all)     echo "${ALL_OCI_TIERS[@]}" ;;
         app-all) echo "${ALL_OCI_APP_TIERS[@]}" ;;
         sys-all) echo "${ALL_OCI_SYS_TIERS[@]}" ;;
+        vm-all)  echo "${ALL_OCI_VM_TIERS[@]}" ;;
         *)       resolve_oci_deps "$target" ;;
     esac
 }
@@ -601,12 +618,12 @@ do_oci_command() {
     if [[ $# -gt 0 ]]; then
         case "$1" in
             build|test|all) sub_cmd="$1"; shift ;;
-            seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc|app-all|sys-all) oci_image="$1"; shift ;;
+            seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all) oci_image="$1"; shift ;;
         esac
     fi
     if [[ $# -gt 0 ]]; then
         case "$1" in
-            seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc|app-all|sys-all|all) oci_image="$1"; shift ;;
+            seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all|all) oci_image="$1"; shift ;;
         esac
     fi
     while [[ $# -gt 0 ]]; do
@@ -625,7 +642,7 @@ do_oci_command() {
     # Compute build list and force set
     local tiers
     if [[ "$sub_cmd" == "build" || "$sub_cmd" == "all" ]]; then
-        if [[ "$force_cascade" == true && "$oci_image" != "all" && "$oci_image" != "app-all" && "$oci_image" != "sys-all" ]]; then
+        if [[ "$force_cascade" == true && "$oci_image" != "all" && "$oci_image" != "app-all" && "$oci_image" != "sys-all" && "$oci_image" != "vm-all" ]]; then
             tiers=$(resolve_oci_cascade_list "$oci_image")
             for t in $(resolve_oci_downstream "$oci_image"); do
                 FORCE_TIERS["$t"]=1
@@ -837,7 +854,7 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
-        seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc|app-all|sys-all)
+        seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all)
             IMAGE="$1"
             shift
             ;;
@@ -855,7 +872,7 @@ if [[ $# -gt 0 ]]; then
             IMAGE="$1"
             shift
             ;;
-        seed|seed-lxc|fiber|fiber-lxc|sheet|sheet-lxc|page|page-lxc|tome|tome-lxc|press|press-lxc|gutenberg|gutenberg-lxc|app-all|sys-all)
+        seed|seed-lxc|seed-vm|fiber|fiber-lxc|fiber-vm|sheet|sheet-lxc|sheet-vm|page|page-lxc|page-vm|tome|tome-lxc|tome-vm|press|press-lxc|press-vm|gutenberg|gutenberg-lxc|gutenberg-vm|app-all|sys-all|vm-all)
             IMAGE="$1"
             shift
             ;;
@@ -899,7 +916,7 @@ if is_oci_tier "$IMAGE"; then
         done
     elif [[ "$FORCE" == true ]]; then
         case "$IMAGE" in
-            app-all|sys-all)
+            app-all|sys-all|vm-all)
                 for t in $(resolve_oci_tiers "$IMAGE"); do FORCE_TIERS["$t"]=1; done
                 ;;
             *)

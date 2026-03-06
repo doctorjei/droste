@@ -56,7 +56,8 @@ drostify oci build fiber-lxc       # build fiber-lxc (kento-bootable)
 drostify oci build sheet           # builds fiber first if missing
 drostify oci build app-all         # all process containers (non-lxc)
 drostify oci build sys-all         # all system containers (-lxc variants)
-drostify oci build all             # all OCI tiers (app + sys)
+drostify oci build vm-all          # all VM-bootable containers (-vm variants)
+drostify oci build all             # all OCI tiers (app + sys + vm)
 drostify oci build sheet --force-cascade  # rebuild sheet + all downstream
 ```
 
@@ -65,6 +66,16 @@ drostify oci build sheet --force-cascade  # rebuild sheet + all downstream
 ```bash
 drostify oci test fiber            # test fiber
 drostify oci test all              # test all OCI tiers
+```
+
+### VM-bootable OCI images (-vm)
+
+The `-vm` tier line adds kernel files (`/boot/vmlinuz` and `/boot/initramfs.img`)
+on top of each `-lxc` image, enabling boot via kento VM mode (QEMU + virtiofs).
+
+```bash
+drostify oci build seed-vm         # build VM-bootable seed
+drostify oci build vm-all          # build all -vm tiers
 ```
 
 ### Pushing seed to GHCR

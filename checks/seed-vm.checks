@@ -1,0 +1,6 @@
+@quiet seed.checks
+@quiet seed-lxc.checks
+
+# VM boot files (kento VM mode)
+vmlinuz exists	test -f /boot/vmlinuz
+initramfs.img exists	test -f /boot/initramfs.img

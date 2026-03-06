@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=droste-press-lxc
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-press-vm: VM-bootable press (kento VM mode)"
+
+COPY oci/vmlinuz /boot/vmlinuz
+COPY oci/initramfs.img /boot/initramfs.img

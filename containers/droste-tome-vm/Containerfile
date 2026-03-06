@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=droste-tome-lxc
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-tome-vm: VM-bootable tome (kento VM mode)"
+
+COPY oci/vmlinuz /boot/vmlinuz
+COPY oci/initramfs.img /boot/initramfs.img

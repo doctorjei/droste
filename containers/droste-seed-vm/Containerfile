@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=droste-seed-lxc
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-seed-vm: VM-bootable seed (kento VM mode)"
+
+COPY oci/vmlinuz /boot/vmlinuz
+COPY oci/initramfs.img /boot/initramfs.img

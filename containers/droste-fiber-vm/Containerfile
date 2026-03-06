@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=droste-fiber-lxc
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-fiber-vm: VM-bootable fiber (kento VM mode)"
+
+COPY oci/vmlinuz /boot/vmlinuz
+COPY oci/initramfs.img /boot/initramfs.img

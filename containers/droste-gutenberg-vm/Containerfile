@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=droste-gutenberg-lxc
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-gutenberg-vm: VM-bootable gutenberg (kento VM mode)"
+
+COPY oci/vmlinuz /boot/vmlinuz
+COPY oci/initramfs.img /boot/initramfs.img

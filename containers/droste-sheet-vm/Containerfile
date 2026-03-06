@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=droste-sheet-lxc
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-sheet-vm: VM-bootable sheet (kento VM mode)"
+
+COPY oci/vmlinuz /boot/vmlinuz
+COPY oci/initramfs.img /boot/initramfs.img

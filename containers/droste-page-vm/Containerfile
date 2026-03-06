@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=droste-page-lxc
+FROM ${BASE_IMAGE}
+
+LABEL description="droste-page-vm: VM-bootable page (kento VM mode)"
+
+COPY oci/vmlinuz /boot/vmlinuz
+COPY oci/initramfs.img /boot/initramfs.img

@@ -7,6 +7,8 @@ on:
       - 'containers/**'
       - 'containers/droste-seed/seed-target.txt'
       - 'oci/seed-oci-exclude.txt'
+      - 'oci/vmlinuz'
+      - 'oci/initramfs.img'
   workflow_dispatch:
 
 env:
@@ -52,6 +54,21 @@ jobs:
           cache-from: type=gha,scope=seed-lxc
           cache-to: type=gha,mode=max,scope=seed-lxc
 
+      # ── seed-vm (← seed-lxc:sha) ───────────────────────────────
+      - name: Build and push seed-vm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-seed-vm/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed-vm:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed-vm:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed-lxc:${{ github.sha }}
+          cache-from: type=gha,scope=seed-vm
+          cache-to: type=gha,mode=max,scope=seed-vm
+
       # ── fiber (← seed:latest) ────────────────────────────────────
       - name: Build and push fiber
         uses: docker/build-push-action@v6
@@ -81,6 +98,21 @@ jobs:
             BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
           cache-from: type=gha,scope=fiber-lxc
           cache-to: type=gha,mode=max,scope=fiber-lxc
+
+      # ── fiber-vm (← fiber-lxc:sha) ─────────────────────────────
+      - name: Build and push fiber-vm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-fiber-vm/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber-vm:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber-vm:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber-lxc:${{ github.sha }}
+          cache-from: type=gha,scope=fiber-vm
+          cache-to: type=gha,mode=max,scope=fiber-vm
 
       # ── sheet (← fiber:sha) ──────────────────────────────────────
       - name: Build and push sheet
@@ -112,6 +144,21 @@ jobs:
           cache-from: type=gha,scope=sheet-lxc
           cache-to: type=gha,mode=max,scope=sheet-lxc
 
+      # ── sheet-vm (← sheet-lxc:sha) ─────────────────────────────
+      - name: Build and push sheet-vm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-sheet-vm/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet-vm:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet-vm:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet-lxc:${{ github.sha }}
+          cache-from: type=gha,scope=sheet-vm
+          cache-to: type=gha,mode=max,scope=sheet-vm
+
       # ── page (← sheet:sha) ───────────────────────────────────────
       - name: Build and push page
         uses: docker/build-push-action@v6
@@ -141,6 +188,21 @@ jobs:
             BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:${{ github.sha }}
           cache-from: type=gha,scope=page-lxc
           cache-to: type=gha,mode=max,scope=page-lxc
+
+      # ── page-vm (← page-lxc:sha) ───────────────────────────────
+      - name: Build and push page-vm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-page-vm/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page-vm:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page-vm:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page-lxc:${{ github.sha }}
+          cache-from: type=gha,scope=page-vm
+          cache-to: type=gha,mode=max,scope=page-vm
 
       # ── tome (← page:sha) ────────────────────────────────────────
       - name: Build and push tome
@@ -172,6 +234,21 @@ jobs:
           cache-from: type=gha,scope=tome-lxc
           cache-to: type=gha,mode=max,scope=tome-lxc
 
+      # ── tome-vm (← tome-lxc:sha) ───────────────────────────────
+      - name: Build and push tome-vm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-tome-vm/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome-vm:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome-vm:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome-lxc:${{ github.sha }}
+          cache-from: type=gha,scope=tome-vm
+          cache-to: type=gha,mode=max,scope=tome-vm
+
       # ── press (← tome:sha) ───────────────────────────────────────
       - name: Build and push press
         uses: docker/build-push-action@v6
@@ -202,6 +279,21 @@ jobs:
           cache-from: type=gha,scope=press-lxc
           cache-to: type=gha,mode=max,scope=press-lxc
 
+      # ── press-vm (← press-lxc:sha) ─────────────────────────────
+      - name: Build and push press-vm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-press-vm/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press-vm:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press-vm:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press-lxc:${{ github.sha }}
+          cache-from: type=gha,scope=press-vm
+          cache-to: type=gha,mode=max,scope=press-vm
+
       # ── gutenberg (← press:sha) ──────────────────────────────────
       - name: Build and push gutenberg
         uses: docker/build-push-action@v6
@@ -231,3 +323,18 @@ jobs:
             BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:${{ github.sha }}
           cache-from: type=gha,scope=gutenberg-lxc
           cache-to: type=gha,mode=max,scope=gutenberg-lxc
+
+      # ── gutenberg-vm (← gutenberg-lxc:sha) ─────────────────────
+      - name: Build and push gutenberg-vm
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-gutenberg-vm/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg-vm:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg-vm:${{ github.sha }}
+          build-args: |
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg-lxc:${{ github.sha }}
+          cache-from: type=gha,scope=gutenberg-vm
+          cache-to: type=gha,mode=max,scope=gutenberg-vm

@@ -328,6 +328,10 @@ cleanup_mounts "$WORK_DIR"
 rm -rf "$WORK_DIR/boot/"*
 rm -rf "$WORK_DIR/lib/modules/"*
 
+# Clear stale fstab from genericcloud (UUID-based mounts for partitions that
+# don't exist in containers, and cause boot failures in -vm images)
+printf '# Empty — no block devices in OCI base\n' > "$WORK_DIR/etc/fstab"
+
 # ── Import into container engine ────────────────────────────────────
 if $DO_IMPORT; then
     echo "Importing into $CONTAINER_CMD as droste-seed..."
