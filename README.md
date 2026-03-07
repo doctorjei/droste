@@ -1,14 +1,14 @@
 # Droste
 
-Nested virtualization images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built on Debian 13 (Trixie) as layered images across three formats: VM (QCOW2), OCI (Containerfiles), and LXC-bootable OCI.
+Nested virtualization images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built on Debian 13 (Trixie) as layered OCI images in three variants: process containers, system containers ([kento](https://pypi.org/project/kento/)), and VM-bootable ([tenkei](https://github.com/doctorjei/tenkei) kernel).
 
 ## Image Formats
 
-| Format | Base | Use case | Init | Kernel |
-|--------|------|----------|------|--------|
-| **OCI** | genericcloud → seed | Process containers, CI/CD | None | Host kernel |
-| **System OCI** | OCI + init/systemd | System containers via [kento](https://pypi.org/project/kento/) | systemd | Host kernel |
-| **VM OCI** | System OCI + kernel | VM boot via [kento](https://pypi.org/project/kento/) VM mode | systemd | Own kernel |
+| Variant | Base | Use case | Init | Kernel |
+|---------|------|----------|------|--------|
+| **App** (paper) | genericcloud → seed | Process containers, CI/CD | None | Host kernel |
+| **System** (cloth) | App + init/systemd | System containers via [kento](https://pypi.org/project/kento/) | systemd | Host kernel |
+| **VM** (wool) | System + [tenkei](https://github.com/doctorjei/tenkei) kernel | VMs via [kento](https://pypi.org/project/kento/) VM mode | systemd | Own kernel |
 
 ## Tiers
 
@@ -54,14 +54,32 @@ Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependen
 
 Pick the smallest tier that has what you need. Most container and networking work only needs **fiber** / **thread**. VM-in-VM testing needs **sheet**. Cluster or HA testing needs **page** / **fabric**.
 
-Each image includes a `droste` user (UID 1000) with passwordless sudo. SSH key
-injection via cloud-init is required on first boot -- there is no login password.
-See [BUILDING.md](BUILDING.md) for build instructions and SSH key setup.
+Each image includes a `droste` user (UID 1000) with passwordless sudo.
+App and system tiers have no login password (use `podman exec` or `lxc-attach`).
+VM tiers have password `droste` for console/SSH login.
 
-## droste-thread: Basic Tools & Container Tools
-*(based on debian-13-genericcloud)*
+## Usage
 
-### Tools in addition to base image
+```bash
+# Process container (app tier)
+podman run --rm -it localhost/droste-fiber bash
+
+# System container via kento (system tier — boots systemd)
+sudo kento container create localhost/droste-thread --name test --start
+sudo lxc-attach -n test
+
+# VM via kento VM mode (VM tier — full kernel)
+sudo kento container create localhost/droste-root --vm --name vm1 --start
+ssh -p 10022 droste@localhost   # password: droste
+```
+
+See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
+[BUILDING.md](BUILDING.md) for build instructions.
+
+## droste-fiber: Basic Tools & Container Tools
+*(based on droste-seed)*
+
+### Tools in addition to seed
 
 **Applications**: ```atop, bc, dnstop, htop, iftop, iotop, smbclient, sqlite3, tmux```
 
@@ -75,10 +93,10 @@ See [BUILDING.md](BUILDING.md) for build instructions and SSH key setup.
 
 **System Tools**: ```etckeeper, locales, molly-guard, watchdog```
 
-## droste-yarn: VM Management & Storage
-*(based on droste-thread)*
+## droste-sheet: VM Management & Storage
+*(based on droste-fiber)*
 
-### Tools in addition to droste-thread
+### Tools in addition to droste-fiber
 
 **Applications**: ```bmon, ncdu, nethogs, picocom```
 
@@ -92,10 +110,10 @@ See [BUILDING.md](BUILDING.md) for build instructions and SSH key setup.
 
 **System Tools**: ```linux-cpupower, irqbalance```
 
-## droste-fabric: High Availability & Clustering
-*(based on droste-yarn)*
+## droste-page: High Availability & Clustering
+*(based on droste-sheet)*
 
-### Tools in addition to droste-yarn
+### Tools in addition to droste-sheet
 
 **High Availability**: ```fence-agents, keepalived, pacemaker, pacemaker-cli-utils, pcs, resource-agents, sbd```
 
@@ -109,10 +127,10 @@ See [BUILDING.md](BUILDING.md) for build instructions and SSH key setup.
 
 **System Tools**: ```numactl```
 
-## droste-tapestry: Testing, Security & Observability
-*(based on droste-fabric)*
+## droste-tome: Testing, Security & Observability
+*(based on droste-page)*
 
-### Tools in addition to droste-fabric
+### Tools in addition to droste-page
 
 **Applications**: ```lnav```
 
@@ -132,10 +150,10 @@ See [BUILDING.md](BUILDING.md) for build instructions and SSH key setup.
 
 **Hardware**: ```ipmitool```
 
-## droste-loom: C/C++ Development Toolchain
-*(based on droste-tapestry)*
+## droste-press: C/C++ Development Toolchain
+*(based on droste-tome)*
 
-### Tools in addition to droste-tapestry
+### Tools in addition to droste-tome
 
 **Compilers**: ```build-essential```
 
@@ -145,9 +163,9 @@ See [BUILDING.md](BUILDING.md) for build instructions and SSH key setup.
 
 **General Utilities**: ```bear, ccache```
 
-## droste-jacquard: Proxmox VE Environment
-*(based on droste-loom)*
+## droste-gutenberg: Proxmox VE Environment
+*(based on droste-press)*
 
-### Tools in addition to droste-loom
+### Tools in addition to droste-press
 
 **Proxmox VE**: ```proxmox-ve, zfsutils-linux```
