@@ -1,7 +1,5 @@
-# Build artifacts (QCOW2 images)
+# Legacy build artifacts
 output-droste-*/
-
-# LXC build artifacts
 output/
 download/
 
