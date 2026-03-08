@@ -13,3 +13,7 @@ droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
 droste in sudo group	id -nG droste | grep -qw sudo
 systemd-networkd DHCP config	test -f /etc/systemd/network/80-dhcp.network
 systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
+
+# VM-only packages
+qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install'
+watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install'

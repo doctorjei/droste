@@ -34,9 +34,10 @@ init/systemd and kernel-dependent packages. They boot as LXC system containers
 with systemd as PID 1. Persistent across restarts.
 
 **VM tiers** (root, hair, wool, felt, amimono, stuffer, stuffinator) add a
-[tenkei](https://github.com/doctorjei/tenkei) kernel and initramfs on top of
-each system tier. Kento boots them via QEMU + virtiofs — the OCI layers become
-the VM's root filesystem without extraction or disk images.
+[tenkei](https://github.com/doctorjei/tenkei) kernel and initramfs, VM-specific
+packages (qemu-guest-agent, watchdog, libvirt, nested virtualization tools, etc.),
+and boot config on top of each system tier. Kento boots them via QEMU + virtiofs
+— the OCI layers become the VM's root filesystem without extraction or disk images.
 
 ## How It Works
 
@@ -132,8 +133,14 @@ qcow2, no conversion.
 
 **Why VM tiers exist separately:** System tiers could theoretically boot as
 VMs if you added kernel files. VM tiers formalize this by including the tenkei
-kernel, setting a password, and configuring DHCP — all baked into the image
-so `kento --vm` works without any manual setup.
+kernel, setting a password, configuring DHCP, and installing VM-specific
+packages that only make sense with a hypervisor — qemu-guest-agent (hypervisor
+integration), watchdog (hardware watchdog), qemu-system-x86/libvirt/swtpm/ovmf
+(nested virtualization), nfs-kernel-server, irqbalance, linux-cpupower, and
+cpu-checker. Higher VM tiers also add fence-agents (full, vs fence-agents-common
+in app tiers) and numactl. Kernel module configs for nested KVM, nbd, and drbd
+are included. All baked into the image so `kento --vm` works without any manual
+setup.
 
 ### Zero duplication
 

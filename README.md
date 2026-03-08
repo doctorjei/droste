@@ -50,7 +50,7 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 | **stuffer** | loom | VM-bootable press |
 | **stuffinator** | jacquard | VM-bootable gutenberg |
 
-Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Each VM tier adds /boot/vmlinuz + initramfs, password, and DHCP config on top of its system sibling.
+Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling.
 
 Pick the smallest tier that has what you need. Most container and networking work only needs **fiber** / **thread**. VM-in-VM testing needs **sheet**. Cluster or HA testing needs **page** / **fabric**.
 

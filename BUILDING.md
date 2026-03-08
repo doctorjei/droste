@@ -48,9 +48,10 @@ drostify test all                  # test all OCI tiers
 
 ### VM-bootable OCI images
 
-The VM tier line adds kernel files (`/boot/vmlinuz` and `/boot/initramfs.img`)
-on top of each system image, plus password and DHCP config, enabling boot
-via kento VM mode (QEMU + virtiofs).
+The VM tier line adds kernel files (`/boot/vmlinuz` and `/boot/initramfs.img`),
+VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt tools,
+etc.), kernel module configs, password, and DHCP config on top of each system
+image, enabling boot via kento VM mode (QEMU + virtiofs).
 
 ```bash
 drostify build root                # build VM-bootable seed

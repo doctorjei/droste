@@ -6,6 +6,12 @@ LABEL description="droste-root: VM-bootable seed (kento VM mode)"
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img
 
+# VM-only packages (not useful in system/LXC containers)
+RUN apt-get update \
+    && apt-get install -y -qq --no-install-recommends \
+       qemu-guest-agent watchdog \
+    && rm -rf /var/lib/apt/lists/*
+
 # VM boot fixes: clear stale fstab, set login password, enable DHCP
 RUN > /etc/fstab \
     && echo 'droste:droste' | chpasswd \

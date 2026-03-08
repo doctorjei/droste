@@ -15,3 +15,21 @@ droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
 droste in sudo group	id -nG droste | grep -qw sudo
 systemd-networkd DHCP config	test -f /etc/systemd/network/80-dhcp.network
 systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
+
+# VM-only packages
+qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install'
+watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install'
+qemu-system-x86 installed	dpkg -s qemu-system-x86 2>/dev/null | grep -q '^Status: install'
+swtpm installed	dpkg -s swtpm 2>/dev/null | grep -q '^Status: install'
+ovmf installed	dpkg -s ovmf 2>/dev/null | grep -q '^Status: install'
+libvirt-daemon-system installed	dpkg -s libvirt-daemon-system 2>/dev/null | grep -q '^Status: install'
+virtinst installed	dpkg -s virtinst 2>/dev/null | grep -q '^Status: install'
+nbdkit installed	dpkg -s nbdkit 2>/dev/null | grep -q '^Status: install'
+nfs-kernel-server installed	dpkg -s nfs-kernel-server 2>/dev/null | grep -q '^Status: install'
+cpu-checker installed	dpkg -s cpu-checker 2>/dev/null | grep -q '^Status: install'
+irqbalance installed	dpkg -s irqbalance 2>/dev/null | grep -q '^Status: install'
+linux-cpupower installed	dpkg -s linux-cpupower 2>/dev/null | grep -q '^Status: install'
+
+# VM kernel module config
+kvm nested virt config	test -f /etc/modprobe.d/kvm-nested.conf
+nbd module autoload	grep -q nbd /etc/modules-load.d/droste.conf

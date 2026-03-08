@@ -6,6 +6,20 @@ LABEL description="droste-stuffer: VM-bootable press (kento VM mode)"
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img
 
+# VM-only packages (not useful in system/LXC containers)
+RUN apt-get update \
+    && apt-get install -y -qq --no-install-recommends \
+       qemu-guest-agent watchdog \
+       qemu-system-x86 swtpm ovmf libvirt-daemon-system virtinst nbdkit \
+       nfs-kernel-server cpu-checker irqbalance linux-cpupower \
+       fence-agents numactl \
+    && rm -rf /var/lib/apt/lists/*
+
+# VM kernel module config
+RUN printf 'options kvm_intel nested=1\noptions kvm_amd nested=1\n' \
+       > /etc/modprobe.d/kvm-nested.conf \
+    && printf 'nbd\ndrbd\n' > /etc/modules-load.d/droste.conf
+
 # VM boot fixes: clear stale fstab, set login password, enable DHCP
 RUN > /etc/fstab \
     && echo 'droste:droste' | chpasswd \
