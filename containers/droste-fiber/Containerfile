@@ -52,8 +52,8 @@ RUN chmod 755 /usr/local/bin/pystrings /usr/local/bin/pyhttpd \
     && update-alternatives --install /usr/bin/httpd httpd /usr/local/bin/pyhttpd 10
 
 # ── Rootless Podman ──────────────────────────────────────────────
-RUN printf 'droste:100000:65536\n' >> /etc/subuid \
-    && printf 'droste:100000:65536\n' >> /etc/subgid \
+RUN grep -q '^droste:' /etc/subuid  || printf 'droste:100000:65536\n' >> /etc/subuid \
+    && grep -q '^droste:' /etc/subgid || printf 'droste:100000:65536\n' >> /etc/subgid \
     && mkdir -p /home/droste/.config/containers \
     && printf '[storage]\ndriver = "overlay"\n\n[storage.options.overlay]\nmount_program = "/usr/bin/fuse-overlayfs"\n' \
        > /home/droste/.config/containers/storage.conf \
