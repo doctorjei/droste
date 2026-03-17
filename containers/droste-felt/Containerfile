@@ -20,11 +20,12 @@ RUN printf 'options kvm_intel nested=1\noptions kvm_amd nested=1\n' \
        > /etc/modprobe.d/kvm-nested.conf \
     && printf 'nbd\ndrbd\n' > /etc/modules-load.d/droste.conf
 
-# VM boot fixes: clear stale fstab, set login password, enable DHCP
+# VM boot fixes: clear stale fstab, set login password, enable DHCP + serial console
 RUN > /etc/fstab \
     && echo 'droste:droste' | chpasswd \
     && usermod -aG sudo droste \
     && mkdir -p /etc/systemd/network \
     && printf '[Match]\nName=en*\n\n[Network]\nDHCP=yes\n' \
        > /etc/systemd/network/80-dhcp.network \
-    && systemctl enable systemd-networkd
+    && systemctl enable systemd-networkd \
+    && systemctl enable serial-getty@ttyS0.service

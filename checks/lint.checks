@@ -17,3 +17,6 @@ apparmor installed	dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok i
 
 # Init functional
 /sbin/init exists	test -x /sbin/init
+
+# LXC console access
+getty@console enabled	test -L /etc/systemd/system/getty.target.wants/getty@console.service
