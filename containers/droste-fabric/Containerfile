@@ -16,6 +16,9 @@ RUN apt-get -qq update \
     && rm -f /tmp/seed-oci-exclude.txt \
     && rm -rf /var/lib/apt/lists/*
 
+# Mask services that break LXC (growfs needs block device, remount-fs needs fstab)
+RUN systemctl mask systemd-growfs-root.service systemd-remount-fs.service
+
 # Enable getty on /dev/console for LXC console access
 RUN systemctl enable getty@console.service
 

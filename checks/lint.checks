@@ -18,5 +18,12 @@ apparmor installed	dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok i
 # Init functional
 /sbin/init exists	test -x /sbin/init
 
+# fstab still clean (recheck after system package reinstall)
+fstab has no mount entries	! grep -qvE '^#|^$' /etc/fstab
+
+# Masked services (break LXC — no block device, no real fstab)
+systemd-growfs-root masked	test -L /etc/systemd/system/systemd-growfs-root.service
+systemd-remount-fs masked	test -L /etc/systemd/system/systemd-remount-fs.service
+
 # LXC console access
 getty@console enabled	test -L /etc/systemd/system/getty.target.wants/getty@console.service

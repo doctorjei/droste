@@ -12,9 +12,11 @@ RUN apt-get update \
        qemu-guest-agent watchdog \
     && rm -rf /var/lib/apt/lists/*
 
-# VM boot fixes: clear stale fstab, set login password, enable DHCP + serial console
-RUN > /etc/fstab \
-    && echo 'droste:droste' | chpasswd \
+# Unmask services that system tier masks for LXC (VMs need these)
+RUN systemctl unmask systemd-growfs-root.service systemd-remount-fs.service
+
+# VM boot fixes: set login password, enable DHCP + serial console
+RUN echo 'droste:droste' | chpasswd \
     && usermod -aG sudo droste \
     && mkdir -p /etc/systemd/network \
     && printf '[Match]\nName=en*\n\n[Network]\nDHCP=yes\n' \

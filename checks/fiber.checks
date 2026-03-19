@@ -67,6 +67,11 @@ xxd available	xxd --version
 strings available	command -v strings
 httpd available	command -v httpd
 
+# Python packaging
+pip3 available	pip3 --version
+python3 -m venv works	python3 -c "import venv"
+uv available	command -v uv || test -x /home/droste/.local/bin/uv
+
 # Rootless Podman
 subuid configured	grep -q '^droste:' /etc/subuid
 subgid configured	grep -q '^droste:' /etc/subgid

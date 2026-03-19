@@ -42,6 +42,8 @@ RUN apt-get -qq update \
       pv \
       # Hex tools
       xxd \
+      # Python packaging
+      python3-pip python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python micro-tools ──────────────────────────────────────────
@@ -60,3 +62,6 @@ RUN grep -q '^droste:' /etc/subuid  || printf 'droste:100000:65536\n' >> /etc/su
     && chown -R droste:droste /home/droste/.config
 
 USER droste
+
+# uv (Python package manager, not in Debian repos)
+RUN pipx install uv

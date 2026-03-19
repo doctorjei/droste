@@ -18,7 +18,9 @@ vmlinuz exists	test -f /boot/vmlinuz
 initramfs.img exists	test -f /boot/initramfs.img
 
 # VM boot readiness
-fstab is empty	test ! -s /etc/fstab
+fstab has no mount entries	! grep -qvE '^#|^$' /etc/fstab
+systemd-growfs-root unmasked	! test -L /etc/systemd/system/systemd-growfs-root.service
+systemd-remount-fs unmasked	! test -L /etc/systemd/system/systemd-remount-fs.service
 droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
 droste in sudo group	id -nG droste | grep -qw sudo
 systemd-networkd DHCP config	test -f /etc/systemd/network/80-dhcp.network
