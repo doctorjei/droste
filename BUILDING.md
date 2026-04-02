@@ -67,6 +67,7 @@ drostify build vm-all              # build all VM tiers
 | `--force-tier` | Rebuild only the named tier(s), without cascading downstream |
 | `--deps` | Also rebuild ancestor dependencies (combine with `--force` or `--force-tier`) |
 | `--verbose` | Show full build output (builds are quiet by default) |
+| `--debug` | Alias for `--verbose` |
 
 Default behavior (no flags) skips tiers whose images already exist.
 
@@ -93,9 +94,9 @@ login password is set on app or system tiers. VM tiers have password
 
 ## Testing
 
-### OCI tests
+### Running tests
 
-OCI tests run containers and verify packages via check files:
+Tests run containers and verify packages via check files:
 
 ```bash
 drostify test fiber                # test fiber process container
@@ -105,15 +106,39 @@ drostify test all                  # test all OCI tiers
 
 ### Check files
 
-Check files live in `checks/` (one per tier, tab-separated format):
+Check files live in `checks/` (one per tier). Each line is either a
+directive, a section header, or a test:
 
 ```
-description<TAB>command
+@quiet seed.checks              ← include another check file (quiet mode)
+@stop                           ← everything below is local-only
+
+# Section header                ← printed as a label during test output
+description<TAB>command         ← a test (tab-separated)
 ```
 
-Check files use `@quiet <file>` directives to include parent tier
-checks (run silently, failures still reported). Use `@stop` to mark a
-section boundary — checks after `@stop` are not included by child tiers.
+**Test format:** `description<TAB>command`. The command runs inside the
+container; exit 0 = pass, non-zero = fail.
+
+**Directives:**
+
+- `@quiet <file>` — Include checks from another file (resolved relative
+  to `checks/`). Quiet checks run silently; only failures are reported.
+  Tiers use this to inherit all ancestor checks without noisy output.
+  System tiers include checks from their app counterpart and all lower
+  app tiers (e.g., `fabric.checks` includes `seed`, `lint`, `fiber`,
+  `thread`, `sheet`, `yarn`, and `page` checks). This is cross-line
+  verification by design — fabric has the same packages as yarn
+  (installed independently), and the quiet checks catch any divergence.
+
+- `@stop` — Marks the end of inheritable checks. Lines after `@stop`
+  are local to this tier and not included by any `@quiet` directive.
+  Use this for negative tests (e.g., "package X should NOT be installed")
+  that only make sense for this specific tier.
+
+**Section headers:** Lines starting with `# ` (hash + space) are printed
+as labels during verbose test output. Blank lines and lines starting
+with `@` are skipped.
 
 ## Image Layout
 
