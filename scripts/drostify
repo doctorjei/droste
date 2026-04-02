@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Build, test, and manage droste OCI images.
+# Build, test, and manage droste images.
 #
 # Usage:
-#   scripts/drostify build fiber              # build fiber OCI
+#   scripts/drostify build fiber              # build fiber
 #   scripts/drostify build all --force        # rebuild all tiers
-#   scripts/drostify test sheet               # test sheet OCI
+#   scripts/drostify test sheet               # test sheet
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,30 +29,30 @@ LAYER_SYS=(lint  thread  yarn   fabric  tapestry  loom     jacquard)
 LAYER_VM=(root   hair    wool   felt    amimono   stuffer  stuffinator)
 
 # ── Derived tier arrays ─────────────────────────────────────────────
-ALL_OCI_APP_TIERS=("${LAYER_APP[@]}")
-ALL_OCI_SYS_TIERS=("${LAYER_SYS[@]}")
-ALL_OCI_VM_TIERS=("${LAYER_VM[@]}")
+ALL_APP_TIERS=("${LAYER_APP[@]}")
+ALL_SYS_TIERS=("${LAYER_SYS[@]}")
+ALL_VM_TIERS=("${LAYER_VM[@]}")
 
 # Interleaved build order: app[i], sys[i], vm[i] for each layer.
 # This is also the correct dependency order and downstream order.
-ALL_OCI_TIERS=()
+ALL_TIERS=()
 for _i in "${!LAYER_APP[@]}"; do
-    ALL_OCI_TIERS+=("${LAYER_APP[$_i]}" "${LAYER_SYS[$_i]}" "${LAYER_VM[$_i]}")
+    ALL_TIERS+=("${LAYER_APP[$_i]}" "${LAYER_SYS[$_i]}" "${LAYER_VM[$_i]}")
 done
 unset _i
 
 # ── Tier helpers ────────────────────────────────────────────────────
-is_oci_tier() {
+is_tier() {
     case "$1" in app-all|sys-all|vm-all) return 0 ;; esac
     local t
-    for t in "${ALL_OCI_TIERS[@]}"; do
+    for t in "${ALL_TIERS[@]}"; do
         [[ "$t" == "$1" ]] && return 0
     done
     return 1
 }
 
-# Return the parent tier for a given OCI tier.
-oci_parent() {
+# Return the parent tier for a given tier.
+tier_parent() {
     local tier="$1"
     local i
     for i in "${!LAYER_APP[@]}"; do
@@ -87,15 +87,14 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [COMMAND] [IMAGE] [OPTIONS]
 
-Build and test droste OCI images.
+Build and test droste images.
 
 Commands:
   build      Build the image(s)
   test       Run smoke tests on existing image(s)
-  oci        Build/test OCI container images (explicit prefix)
   help       Show this help message
 
-Images (OCI):
+Tiers:
 EOF
     # Generate tier list from arrays
     local i
@@ -108,7 +107,7 @@ EOF
   app-all      All app/process containers
   sys-all      All system containers
   vm-all       All VM-bootable containers
-  all          All OCI tiers (app + sys + vm)
+  all          All tiers (app + sys + vm)
 
 Options:
   --force            Rebuild named tier(s) and all downstream dependents
@@ -125,9 +124,9 @@ Options:
   Add --deps to either to also force ancestor dependencies.
 
 Examples:
-  $(basename "$0") build ${LAYER_APP[1]}                          # build ${LAYER_APP[1]} OCI
+  $(basename "$0") build ${LAYER_APP[1]}                          # build ${LAYER_APP[1]}
   $(basename "$0") build ${LAYER_SYS[1]}                      # build bootable ${LAYER_SYS[1]} for kento
-  $(basename "$0") test ${LAYER_APP[2]}                           # test ${LAYER_APP[2]} OCI
+  $(basename "$0") test ${LAYER_APP[2]}                           # test ${LAYER_APP[2]}
   $(basename "$0") build all                              # build all, skip existing
   $(basename "$0") build all --force                      # rebuild everything
   $(basename "$0") build ${LAYER_APP[2]} --force                  # rebuild ${LAYER_APP[2]} + all downstream
@@ -137,8 +136,8 @@ Examples:
 EOF
 }
 
-# ── OCI test ────────────────────────────────────────────────────────
-do_test_oci() {
+# ── Test ────────────────────────────────────────────────────────
+do_test() {
     local tier="$1"
     local image="droste-${tier}"
     local checkfile="$PROJECT_DIR/checks/${tier}.checks"
@@ -150,7 +149,7 @@ do_test_oci() {
         return 0
     fi
 
-    echo "droste-${tier} OCI test"
+    echo "droste-${tier} test"
     echo "======================"
     echo ""
 
@@ -216,8 +215,8 @@ do_test_oci() {
     fi
 }
 
-# ── OCI build ───────────────────────────────────────────────────────
-do_build_oci() {
+# ── Build ───────────────────────────────────────────────────────
+do_build() {
     local tier="$1"
     local container_cmd
     container_cmd=$(detect_container_cmd)
@@ -236,13 +235,13 @@ do_build_oci() {
         echo ""
         "$PROJECT_DIR/containers/droste-${tier}/build-seed.sh"
         echo ""
-        do_test_oci "$tier"
+        do_test "$tier"
         return
     fi
 
     # Map tier → parent image for BASE_IMAGE arg
     local parent
-    parent=$(oci_parent "$tier")
+    parent=$(tier_parent "$tier")
 
     echo "Building droste-${tier} container..."
     echo ""
@@ -284,25 +283,25 @@ do_build_oci() {
     $container_cmd image inspect "droste-${tier}" --format '{{.Size}}' | \
         awk '{printf "Image size: %.0f MB\n", $1/1024/1024}'
     echo ""
-    do_test_oci "$tier"
+    do_test "$tier"
 }
 
-# ── OCI tier resolution ────────────────────────────────────────────
+# ── Tier resolution ────────────────────────────────────────────
 # Return dependency chain: all ancestors from seed through target.
-resolve_oci_deps() {
+resolve_deps() {
     local target="$1"
     local chain=()
     local current="$target"
     # Walk up the parent chain
     while [[ -n "$current" ]]; do
         chain=("$current" "${chain[@]}")
-        current=$(oci_parent "$current")
+        current=$(tier_parent "$current")
     done
     echo "${chain[@]}"
 }
 
-# Return target tier + all downstream dependents (graph walk via oci_parent).
-resolve_oci_downstream() {
+# Return target tier + all downstream dependents (graph walk via tier_parent).
+resolve_downstream() {
     local from="$1"
     local -A visited=()
     local changed=true tier
@@ -310,10 +309,10 @@ resolve_oci_downstream() {
     visited["$from"]=1
     while [[ "$changed" == true ]]; do
         changed=false
-        for tier in "${ALL_OCI_TIERS[@]}"; do
+        for tier in "${ALL_TIERS[@]}"; do
             [[ -n "${visited[$tier]+x}" ]] && continue
             local p
-            p=$(oci_parent "$tier")
+            p=$(tier_parent "$tier")
             if [[ -n "$p" && -n "${visited[$p]+x}" ]]; then
                 visited["$tier"]=1
                 changed=true
@@ -321,162 +320,61 @@ resolve_oci_downstream() {
         done
     done
     # Output in build order
-    for tier in "${ALL_OCI_TIERS[@]}"; do
+    for tier in "${ALL_TIERS[@]}"; do
         [[ -n "${visited[$tier]+x}" ]] && echo "$tier"
     done
 }
 
 # Return tiers to build for a target (dependency order).
-resolve_oci_tiers() {
+resolve_tiers() {
     local target="$1"
     case "$target" in
-        all)     echo "${ALL_OCI_TIERS[@]}" ;;
-        app-all) echo "${ALL_OCI_APP_TIERS[@]}" ;;
-        sys-all) echo "${ALL_OCI_SYS_TIERS[@]}" ;;
-        vm-all)  echo "${ALL_OCI_VM_TIERS[@]}" ;;
-        *)       resolve_oci_deps "$target" ;;
+        all)     echo "${ALL_TIERS[@]}" ;;
+        app-all) echo "${ALL_APP_TIERS[@]}" ;;
+        sys-all) echo "${ALL_SYS_TIERS[@]}" ;;
+        vm-all)  echo "${ALL_VM_TIERS[@]}" ;;
+        *)       resolve_deps "$target" ;;
     esac
 }
 
 # Expand a target's build list to include all ancestors of each tier.
-# For single tiers this is the same as resolve_oci_deps. For group
+# For single tiers this is the same as resolve_deps. For group
 # targets (sys-all, vm-all) it pulls in ancestor tiers outside the group.
-resolve_oci_with_deps() {
+resolve_with_deps() {
     local target="$1"
     local -A include
     local t dep
-    for t in $(resolve_oci_tiers "$target"); do
-        for dep in $(resolve_oci_deps "$t"); do
+    for t in $(resolve_tiers "$target"); do
+        for dep in $(resolve_deps "$t"); do
             include["$dep"]=1
         done
     done
-    for tier in "${ALL_OCI_TIERS[@]}"; do
+    for tier in "${ALL_TIERS[@]}"; do
         [[ -n "${include[$tier]+x}" ]] && echo "$tier"
     done
 }
 
 # Expand a target's build list to include all downstream of each tier.
-# For single tiers this is the same as resolve_oci_with_deps + downstream. For
+# For single tiers this is the same as resolve_with_deps + downstream. For
 # group targets (app-all) it pulls in downstream tiers outside the group.
-resolve_oci_with_cascade() {
+resolve_with_cascade() {
     local target="$1"
     local -A include
     local t down
-    for t in $(resolve_oci_tiers "$target"); do
-        for down in $(resolve_oci_downstream "$t"); do
+    for t in $(resolve_tiers "$target"); do
+        for down in $(resolve_downstream "$t"); do
             include["$down"]=1
         done
     done
     # Also include deps so the build order is complete
-    for t in $(resolve_oci_tiers "$target"); do
-        for dep in $(resolve_oci_deps "$t"); do
+    for t in $(resolve_tiers "$target"); do
+        for dep in $(resolve_deps "$t"); do
             include["$dep"]=1
         done
     done
-    for tier in "${ALL_OCI_TIERS[@]}"; do
+    for tier in "${ALL_TIERS[@]}"; do
         [[ -n "${include[$tier]+x}" ]] && echo "$tier"
     done
-}
-
-# ── OCI command handler ────────────────────────────────────────────
-do_oci_command() {
-    local sub_cmd="all"
-    local oci_image="all"
-    local force=false
-    local force_tier=false
-    local deps=false
-
-    # Parse: oci [build|test|all] [tier] [options]
-    if [[ $# -gt 0 ]]; then
-        case "$1" in
-            build|test|all) sub_cmd="$1"; shift ;;
-            *)
-                if is_oci_tier "$1"; then
-                    oci_image="$1"; shift
-                fi
-                ;;
-        esac
-    fi
-    if [[ $# -gt 0 ]]; then
-        if is_oci_tier "$1" || [[ "$1" == "all" ]]; then
-            oci_image="$1"; shift
-        fi
-    fi
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --force)          force=true; shift ;;
-            --force-tier)     force_tier=true; shift ;;
-            --deps)           deps=true; shift ;;
-            --verbose|--debug) VERBOSE=true; shift ;;
-            *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
-        esac
-    done
-
-    # --force-tier implies force
-    [[ "$force_tier" == true ]] && force=true
-
-    local container_cmd
-    container_cmd=$(detect_container_cmd)
-    echo "Using container engine: $container_cmd"
-
-    # Compute build list and force set
-    # --force cascades downstream by default; --force-tier does not.
-    # --deps expands the build list to include ancestors.
-    local tiers
-    if [[ "$sub_cmd" == "build" || "$sub_cmd" == "all" ]]; then
-        if [[ "$force" == true && "$force_tier" != true ]]; then
-            # --force: cascade downstream + include deps if requested
-            if [[ "$deps" == true ]]; then
-                tiers=$(resolve_oci_with_cascade "$oci_image")
-                # with_cascade already includes deps; add ancestor deps too
-                local -A all_tiers=()
-                for t in $tiers; do all_tiers["$t"]=1; done
-                for t in $(resolve_oci_with_deps "$oci_image"); do all_tiers["$t"]=1; done
-                tiers=""
-                for tier in "${ALL_OCI_TIERS[@]}"; do
-                    [[ -n "${all_tiers[$tier]+x}" ]] && tiers+="$tier "
-                done
-                # --force --deps: force everything (ancestors + named + downstream)
-                for t in $tiers; do FORCE_TIERS["$t"]=1; done
-            else
-                tiers=$(resolve_oci_with_cascade "$oci_image")
-                # --force: force named tier(s) + downstream, not ancestors
-                for t in $(resolve_oci_tiers "$oci_image"); do
-                    for d in $(resolve_oci_downstream "$t"); do
-                        FORCE_TIERS["$d"]=1
-                    done
-                done
-            fi
-        elif [[ "$force_tier" == true ]]; then
-            # --force-tier: no cascade, optionally include ancestor deps
-            if [[ "$deps" == true ]]; then
-                tiers=$(resolve_oci_with_deps "$oci_image")
-            else
-                tiers=$(resolve_oci_tiers "$oci_image")
-            fi
-            # Force only the named/group tiers
-            for t in $(resolve_oci_tiers "$oci_image"); do
-                FORCE_TIERS["$t"]=1
-            done
-        else
-            tiers=$(resolve_oci_tiers "$oci_image")
-        fi
-    fi
-
-    case "$sub_cmd" in
-        build|all)
-            for tier in $tiers; do
-                echo ""
-                do_build_oci "$tier"
-            done
-            ;;
-        test)
-            for tier in $(resolve_oci_tiers "$oci_image"); do
-                echo ""
-                do_test_oci "$tier"
-            done
-            ;;
-    esac
 }
 
 # ── Parse command and image ──────────────────────────────────────────
@@ -488,11 +386,6 @@ DEPS=false
 
 if [[ $# -gt 0 ]]; then
     case "$1" in
-        oci)
-            shift
-            do_oci_command "$@"
-            exit 0
-            ;;
         build-all)
             # Legacy alias: treat as "build all" with remaining args
             COMMAND="build"
@@ -504,7 +397,7 @@ if [[ $# -gt 0 ]]; then
             shift
             ;;
         *)
-            if is_oci_tier "$1" || [[ "$1" == "all" ]]; then
+            if is_tier "$1" || [[ "$1" == "all" ]]; then
                 IMAGE="$1"
                 shift
             else
@@ -517,7 +410,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 if [[ $# -gt 0 ]]; then
-    if is_oci_tier "$1" || [[ "$1" == "all" ]]; then
+    if is_tier "$1" || [[ "$1" == "all" ]]; then
         IMAGE="$1"
         shift
     fi
@@ -544,19 +437,19 @@ if [[ "$FORCE" == true && "$FORCE_TIER" != true ]]; then
     # --force: cascade downstream + include deps if requested
     if [[ "$DEPS" == true ]]; then
         declare -A _all_tiers=()
-        for t in $(resolve_oci_with_cascade "$IMAGE"); do _all_tiers["$t"]=1; done
-        for t in $(resolve_oci_with_deps "$IMAGE"); do _all_tiers["$t"]=1; done
+        for t in $(resolve_with_cascade "$IMAGE"); do _all_tiers["$t"]=1; done
+        for t in $(resolve_with_deps "$IMAGE"); do _all_tiers["$t"]=1; done
         BUILD_TIERS=""
-        for tier in "${ALL_OCI_TIERS[@]}"; do
+        for tier in "${ALL_TIERS[@]}"; do
             [[ -n "${_all_tiers[$tier]+x}" ]] && BUILD_TIERS+="$tier "
         done
         # --force --deps: force everything (ancestors + named + downstream)
         for t in $BUILD_TIERS; do FORCE_TIERS["$t"]=1; done
     else
-        BUILD_TIERS=$(resolve_oci_with_cascade "$IMAGE")
+        BUILD_TIERS=$(resolve_with_cascade "$IMAGE")
         # --force: force named tier(s) + downstream, not ancestors
-        for t in $(resolve_oci_tiers "$IMAGE"); do
-            for d in $(resolve_oci_downstream "$t"); do
+        for t in $(resolve_tiers "$IMAGE"); do
+            for d in $(resolve_downstream "$t"); do
                 FORCE_TIERS["$d"]=1
             done
         done
@@ -564,14 +457,14 @@ if [[ "$FORCE" == true && "$FORCE_TIER" != true ]]; then
 elif [[ "$FORCE_TIER" == true ]]; then
     # --force-tier: no cascade, optionally include ancestor deps
     if [[ "$DEPS" == true ]]; then
-        BUILD_TIERS=$(resolve_oci_with_deps "$IMAGE")
+        BUILD_TIERS=$(resolve_with_deps "$IMAGE")
     else
-        BUILD_TIERS=$(resolve_oci_tiers "$IMAGE")
+        BUILD_TIERS=$(resolve_tiers "$IMAGE")
     fi
     # Force only the named/group tiers
-    for t in $(resolve_oci_tiers "$IMAGE"); do FORCE_TIERS["$t"]=1; done
+    for t in $(resolve_tiers "$IMAGE"); do FORCE_TIERS["$t"]=1; done
 else
-    BUILD_TIERS=$(resolve_oci_tiers "$IMAGE")
+    BUILD_TIERS=$(resolve_tiers "$IMAGE")
 fi
 
 # ── Main ────────────────────────────────────────────────────────────
@@ -579,13 +472,13 @@ case "$COMMAND" in
     build)
         for tier in $BUILD_TIERS; do
             echo ""
-            do_build_oci "$tier"
+            do_build "$tier"
         done
         ;;
     test)
-        for tier in $(resolve_oci_tiers "$IMAGE"); do
+        for tier in $(resolve_tiers "$IMAGE"); do
             echo ""
-            do_test_oci "$tier"
+            do_test "$tier"
         done
         ;;
     help|-h|--help)
