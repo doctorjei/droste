@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-fabric
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-felt: VM-bootable page (kento VM mode)"
+LABEL description="droste-felt: VM-bootable fabric (kento VM mode)"
 
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img

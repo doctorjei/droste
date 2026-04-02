@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-tome
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-press: C/C++ development toolchain (loom equivalent)"
+LABEL description="droste-press: C/C++ development toolchain (app counterpart of loom)"
 
 USER root
 

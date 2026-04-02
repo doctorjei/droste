@@ -25,7 +25,7 @@ DO_IMPORT=true
 
 QCOW2_URL="https://cloud.debian.org/images/cloud/trixie/latest"
 QCOW2_FILE="debian-13-genericcloud-amd64.qcow2"
-NBD_DEV="/dev/nbd0"
+# NBD_DEV is set later by find_free_nbd (after modprobe nbd)
 
 # Packages to purge from the genericcloud rootfs.
 # Kernel, bootloader, UEFI, and container-irrelevant packages.
@@ -117,6 +117,17 @@ detect_container_cmd() {
     fi
 }
 
+find_free_nbd() {
+    for dev in /sys/block/nbd*; do
+        if [[ "$(cat "$dev/size" 2>/dev/null)" == "0" ]]; then
+            echo "/dev/${dev##*/}"
+            return 0
+        fi
+    done
+    echo "Error: no free nbd device found" >&2
+    exit 1
+}
+
 if $DO_IMPORT; then
     CONTAINER_CMD=$(detect_container_cmd)
 fi
@@ -185,13 +196,23 @@ MNT_DIR=$(mktemp -d "/tmp/droste-seed-mnt.XXXXXX")
 WORK_DIR=$(mktemp -d "/tmp/droste-seed-rootfs.XXXXXX")
 
 modprobe nbd max_part=8
+NBD_DEV=$(find_free_nbd)
 
 echo "Connecting qcow2 to $NBD_DEV..."
 qemu-nbd -c "$NBD_DEV" "$CACHED" --read-only
 
-sleep 2
 partprobe "$NBD_DEV" 2>/dev/null || true
-sleep 1
+echo "Waiting for ${NBD_DEV}p1 to appear..."
+waited=0
+while ! [[ -b "${NBD_DEV}p1" ]]; do
+    sleep 0.5
+    waited=$((waited + 1))
+    if [[ $waited -ge 20 ]]; then
+        echo "Error: ${NBD_DEV}p1 did not appear after 10 seconds" >&2
+        exit 1
+    fi
+done
+echo "Partition appeared after $((waited / 2)).$((waited % 2 * 5))s"
 
 # Find root partition — genericcloud uses partition 1 (or 2 if p1 is EFI)
 ROOT_PART="${NBD_DEV}p1"

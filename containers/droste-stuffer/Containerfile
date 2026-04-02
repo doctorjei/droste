@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-loom
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-stuffer: VM-bootable press (kento VM mode)"
+LABEL description="droste-stuffer: VM-bootable loom (kento VM mode)"
 
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img

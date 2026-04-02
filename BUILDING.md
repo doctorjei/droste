@@ -36,7 +36,8 @@ drostify build app-all             # all process containers
 drostify build sys-all             # all system containers
 drostify build vm-all              # all VM-bootable containers
 drostify build all                 # all OCI tiers (app + sys + vm)
-drostify build sheet --force-cascade  # rebuild sheet + all downstream
+drostify build sheet --force       # rebuild sheet + all downstream
+drostify build sheet --force-tier  # rebuild only sheet
 ```
 
 ### OCI Testing
@@ -58,24 +59,31 @@ drostify build root                # build VM-bootable seed
 drostify build vm-all              # build all VM tiers
 ```
 
-## Build-All
-
-Build all OCI images in one command:
-
-```bash
-drostify build-all                 # build all OCI images
-drostify build-all --force         # rebuild everything
-```
-
 ## Options
 
 | Flag | Effect |
 |------|--------|
-| `--force` | Rebuild named tier(s) even if images already exist |
-| `--force-cascade` | Rebuild named tier(s) and all downstream dependents |
+| `--force` | Rebuild named tier(s) and all downstream dependents |
+| `--force-tier` | Rebuild only the named tier(s), without cascading downstream |
+| `--deps` | Also rebuild ancestor dependencies (combine with `--force` or `--force-tier`) |
 | `--verbose` | Show full build output (builds are quiet by default) |
 
 Default behavior (no flags) skips tiers whose images already exist.
+
+`--force` cascades by default: rebuilding a tier invalidates its downstream
+dependents, so they are included in the forced set. Use `--force-tier` to
+force only the named tier(s) without cascading. Add `--deps` to either to
+also force ancestor dependencies.
+
+Examples:
+
+```bash
+drostify build sheet --force              # rebuild sheet + all downstream
+drostify build sheet --force-tier         # rebuild only sheet
+drostify build sys-all --force --deps     # rebuild sys tiers + app ancestors + downstream
+drostify build sys-all --force-tier --deps  # rebuild sys tiers + app ancestors (no downstream)
+drostify build all --force                # rebuild everything
+```
 
 ## Credentials
 

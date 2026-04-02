@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-page
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-tome: testing/security/observability layer (tapestry equivalent)"
+LABEL description="droste-tome: testing/security/observability layer (app counterpart of tapestry)"
 
 USER root
 

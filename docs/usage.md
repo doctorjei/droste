@@ -78,7 +78,7 @@ OCI layers. Kento bridges this gap:
 
 4. **Cleanup.** On stop, the hook unmounts the overlayfs. The OCI layers are
    untouched. The writable upper layer preserves any changes made inside the
-   container (installed packages, config edits, log files). `kento reset`
+   container (installed packages, config edits, log files). `kento container scrub`
    clears this upper layer to restore the container to its pristine image state.
 
 **Why system tiers work but app tiers don't:** App tiers (seed, fiber, etc.)
@@ -149,7 +149,7 @@ is stored once as a stack of OCI layers. Running it as a process container
 (podman), a system container (kento LXC), or a VM (kento --vm via its VM
 sibling droste-hair) all reference the same layer data. The only per-instance
 storage is the overlayfs upper layer for writes, which starts empty and can
-be cleared with `kento reset`.
+be cleared with `kento container scrub`.
 
 ## Running Process Containers
 
@@ -200,11 +200,11 @@ if the image includes openssh-server (all tiers from thread onward).
 sudo kento container list                  # show all containers
 sudo kento container stop my-test          # stop
 sudo kento container start my-test         # start again
-sudo kento container reset my-test         # clear writable layer (fresh state)
+sudo kento container scrub my-test         # clear writable layer (fresh state)
 sudo kento container rm my-test            # remove container
 ```
 
-`reset` clears all changes made inside the container without re-downloading
+`scrub` clears all changes made inside the container without re-downloading
 or re-extracting any image data. The OCI layers are read-only and shared.
 
 ### Create options
@@ -213,9 +213,7 @@ or re-extracting any image data. The OCI layers are read-only and shared.
 |------|---------|---------|
 | `--name` | auto | Container name |
 | `--start` | false | Start after creation |
-| `--bridge` | lxcbr0 | Network bridge |
-| `--memory` | — | Memory limit (MB) |
-| `--cores` | — | CPU cores |
+| `--bridge` | None | Network bridge |
 | `--nesting` | true | Allow nested containers |
 
 On Proxmox hosts, kento auto-detects PVE and uses `pct` instead of `lxc-*`
@@ -295,7 +293,7 @@ VM tiers have password `droste` set for console and SSH login.
 ## Networking
 
 **System containers** get an IP via the bridge specified at creation time
-(default: `lxcbr0`). Check the IP inside the container:
+(requires `--bridge`, no default). Check the IP inside the container:
 
 ```bash
 sudo lxc-attach -n my-test -- ip addr show

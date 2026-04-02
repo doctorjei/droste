@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-thread
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-hair: VM-bootable fiber (kento VM mode)"
+LABEL description="droste-hair: VM-bootable thread (kento VM mode)"
 
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img

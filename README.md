@@ -42,13 +42,13 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 
 | Tier | Based on | Focus |
 |------|----------|-------|
-| **root** | lint | VM-bootable seed |
-| **hair** | thread | VM-bootable fiber |
-| **wool** | yarn | VM-bootable sheet |
-| **felt** | fabric | VM-bootable page |
-| **amimono** | tapestry | VM-bootable tome |
-| **stuffer** | loom | VM-bootable press |
-| **stuffinator** | jacquard | VM-bootable gutenberg |
+| **root** | lint | VM-bootable lint |
+| **hair** | thread | VM-bootable thread |
+| **wool** | yarn | VM-bootable yarn |
+| **felt** | fabric | VM-bootable fabric |
+| **amimono** | tapestry | VM-bootable tapestry |
+| **stuffer** | loom | VM-bootable loom |
+| **stuffinator** | jacquard | VM-bootable jacquard |
 
 Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling.
 
@@ -163,9 +163,8 @@ See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
 
 **General Utilities**: ```bear, ccache```
 
-## droste-gutenberg: Proxmox VE Environment
+## droste-gutenberg: Placeholder
 *(based on droste-press)*
 
-### Tools in addition to droste-press
-
-**Proxmox VE**: ```proxmox-ve, zfsutils-linux```
+This is a placeholder tier. No additional packages are installed yet.
+Planned for future inclusion: `proxmox-ve`, `zfsutils-linux`.

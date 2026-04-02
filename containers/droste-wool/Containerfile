@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-yarn
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-wool: VM-bootable sheet (kento VM mode)"
+LABEL description="droste-wool: VM-bootable yarn (kento VM mode)"
 
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img

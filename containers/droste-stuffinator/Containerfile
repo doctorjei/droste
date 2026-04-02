@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-jacquard
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-stuffinator: VM-bootable gutenberg (kento VM mode)"
+LABEL description="droste-stuffinator: VM-bootable jacquard (kento VM mode)"
 
 COPY oci/vmlinuz /boot/vmlinuz
 COPY oci/initramfs.img /boot/initramfs.img

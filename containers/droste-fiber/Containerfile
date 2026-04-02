@@ -1,11 +1,11 @@
 ARG BASE_IMAGE=droste-seed
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-fiber: container-ready base (thread equivalent)"
+LABEL description="droste-fiber: container-ready base (app counterpart of thread)"
 
 USER root
 
-# ── Fiber packages (thread equivalent for OCI) ──────────────────
+# ── Fiber packages (same tools as thread, without init/systemd) ──
 # Excludes kernel-dependent packages from LXC fiber: ipvsadm, molly-guard,
 # cifs-utils, nfs-common, fatrace, lxcfs (see checks/hair.checks).
 RUN apt-get -qq update \
