@@ -17,7 +17,7 @@ systemd-growfs-root unmasked	! test -L /etc/systemd/system/systemd-growfs-root.s
 systemd-remount-fs unmasked	! test -L /etc/systemd/system/systemd-remount-fs.service
 droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
 droste in sudo group	id -nG droste | grep -qw sudo
-systemd-networkd DHCP config	test -f /etc/systemd/network/80-dhcp.network
+systemd-networkd DHCP config	grep -q '^Type=ether$' /etc/systemd/network/80-dhcp.network
 systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
 serial-getty@ttyS0 enabled	test -L /etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 
