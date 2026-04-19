@@ -128,8 +128,8 @@ qcow2, no conversion.
      (locked account). VMs need console/SSH login, so VM tiers set
      `droste:droste` via chpasswd.
    - **DHCP**: no network config exists by default. VM tiers create a
-     systemd-networkd config for DHCP on virtio NICs (`en*`) and enable
-     the service.
+     systemd-networkd config for DHCP on any ethernet interface
+     (`[Match] Type=ether`) and enable the service.
 
 **Why VM tiers exist separately:** System tiers could theoretically boot as
 VMs if you added kernel files. VM tiers formalize this by including the tenkei
@@ -299,8 +299,9 @@ VM tiers have password `droste` set for console and SSH login.
 sudo lxc-attach -n my-test -- ip addr show
 ```
 
-**VMs** use DHCP via systemd-networkd on virtio NICs (`en*`). Kento sets
-up user-mode networking with port forwarding for SSH.
+**VMs** use DHCP via systemd-networkd on any ethernet interface
+(`[Match] Type=ether`). Kento sets up user-mode networking with port
+forwarding for SSH.
 
 **Proxmox** hosts use `vmbr0` by default (auto-detected by kento).
 
