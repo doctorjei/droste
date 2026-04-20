@@ -5,18 +5,15 @@ on:
     branches: [main]
     paths:
       - 'containers/**'
-      - 'containers/droste-seed/seed-target.txt'
       - 'oci/seed-oci-exclude.txt'
-      - 'oci/vmlinuz'
-      - 'oci/initramfs.img'
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
 
-# droste-seed is built manually via containers/droste-seed/build-seed.sh
-# (requires root, qemu-nbd, chroot) and pushed to GHCR as :latest.
-# All other tiers are built here from Containerfiles.
+# droste-seed builds FROM ghcr.io/doctorjei/tenkei/canopy (pinned in its
+# Containerfile). All tiers are built here; seed runs first so downstream
+# steps can pull it by :${{ github.sha }}.
 
 jobs:
   build:
@@ -39,7 +36,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ── lint (← seed:latest) ──────────────────────────────────────
+      # ── seed (← canopy:1.4.0) ────────────────────────────────────
+      - name: Build and push seed
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/droste-seed/Containerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:${{ github.sha }}
+          cache-from: type=gha,scope=seed
+          cache-to: type=gha,mode=max,scope=seed
+
+      # ── lint (← seed:sha) ─────────────────────────────────────────
       - name: Build and push lint
         uses: docker/build-push-action@v6
         with:
@@ -50,7 +60,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-lint:latest
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-lint:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:latest
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:${{ github.sha }}
           cache-from: type=gha,scope=lint
           cache-to: type=gha,mode=max,scope=lint
 
@@ -69,7 +79,7 @@ jobs:
           cache-from: type=gha,scope=root
           cache-to: type=gha,mode=max,scope=root
 
-      # ── fiber (← seed:latest) ────────────────────────────────────
+      # ── fiber (← seed:sha) ───────────────────────────────────────
       - name: Build and push fiber
         uses: docker/build-push-action@v6
         with:
@@ -80,7 +90,7 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:latest
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
           build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:latest
+            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:${{ github.sha }}
           cache-from: type=gha,scope=fiber
           cache-to: type=gha,mode=max,scope=fiber
 
