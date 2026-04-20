@@ -2,6 +2,15 @@ FROM ghcr.io/doctorjei/tenkei/canopy:1.4.0
 
 LABEL description="droste-seed: app base, FROM canopy + droste user"
 
+# Canopy ships /usr/bin/ln, /usr/bin/cp, /usr/bin/chmod, etc. as direct
+# symlinks to /usr/bin/busybox. Install coreutils in its own layer so the
+# GNU binaries replace those symlinks before the main restore list runs —
+# several postinsts (locales: `ln -r`, openssh-server: `cp -Z`, debianutils
+# triggers: `chmod/chown --reference`, `mv -Z`) use flags busybox lacks.
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends coreutils \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY containers/droste-seed/canopy-restore.txt /tmp/canopy-restore.txt
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \

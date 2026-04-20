@@ -1,15 +1,11 @@
 # Packages stripped by canopy that droste-seed restores.
 # See plans/canopy-migration.md R7 for audit and rationale.
 # Verified against canopy:1.4.0 dpkg --get-selections (187 pkgs installed).
-#
-# coreutils: canopy ships busybox applets only, but several postinst
-# scripts (locales: ln -r, openssh-server: cp -Z, debianutils: chmod
-# --reference / mv -Z) require GNU flags busybox doesn't implement.
-# Installing coreutils first restores GNU /bin/ln, /bin/cp, etc.
+# Note: coreutils is installed in a prior RUN layer in the Containerfile
+# (must beat other postinsts to /usr/bin/ln etc.), not listed here.
 bind9-host
 bind9-libs
 cloud-image-utils
-coreutils
 dhcpcd-base
 dosfstools
 file
