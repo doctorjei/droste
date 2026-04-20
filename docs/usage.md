@@ -317,6 +317,30 @@ forwarding for SSH.
 
 **Proxmox** hosts use `vmbr0` by default (auto-detected by kento).
 
+## First-Boot Configuration (cloud-init)
+
+All system and VM tiers ship with `cloud-init`, `cloud-guest-utils`, and
+`cloud-utils` installed. App tiers do not (no init system to run cloud-init).
+
+The default datasource list is restricted to the ones that make sense for
+droste's runtime environments:
+
+```yaml
+# /etc/cloud/cloud.cfg.d/99-droste.cfg
+datasource_list: [NoCloud, ConfigDrive, None]
+```
+
+- **NoCloud** — file/ISO/label-based. Used by kento (auto-detected from
+  composed images and routed through a NoCloud seed), `cloud-localds`, and
+  hand-built ISOs.
+- **ConfigDrive** — Proxmox and OpenStack.
+- **None** — fallback; boot succeeds without first-boot config.
+
+This skips ~17 cloud-specific datasources (AWS, Azure, GCE, etc.) that
+droste isn't aimed at, which speeds up first boot. To override per
+deployment, write your own drop-in to `/etc/cloud/cloud.cfg.d/` that
+lex-sorts after `99-droste.cfg`.
+
 ## Storage & Cleanup
 
 **OCI images** live in podman's store. Kento reads layers directly — no

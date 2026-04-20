@@ -12,6 +12,9 @@ dbus-daemon installed	dpkg -s dbus-daemon 2>/dev/null | grep -q "^Status: instal
 polkitd installed	dpkg -s polkitd 2>/dev/null | grep -q "^Status: install ok installed"
 cloud-init installed	dpkg -s cloud-init 2>/dev/null | grep -q "^Status: install ok installed"
 cloud-guest-utils installed	dpkg -s cloud-guest-utils 2>/dev/null | grep -q "^Status: install ok installed"
+cloud-init droste config exists	test -f /etc/cloud/cloud.cfg.d/99-droste.cfg
+cloud-init datasource list pinned	grep -q '^datasource_list:' /etc/cloud/cloud.cfg.d/99-droste.cfg
+cloud-init NoCloud datasource present	grep -q 'NoCloud' /etc/cloud/cloud.cfg.d/99-droste.cfg
 kmod installed	dpkg -s kmod 2>/dev/null | grep -q "^Status: install ok installed"
 apparmor installed	dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok installed"
 

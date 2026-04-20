@@ -52,6 +52,8 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 
 Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Cloth tiers from **thread** onward also include LXC + systemd-container management tools and have `kento` pre-installed (via pipx), making them capable of nested LXC/VM operations from within a booted tier. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling.
 
+All system and VM tiers ship with `cloud-init` for declarative first-boot configuration, with a default datasource list of `[NoCloud, ConfigDrive, None]` (override via `/etc/cloud/cloud.cfg.d/`). See [docs/usage.md](docs/usage.md#first-boot-configuration-cloud-init).
+
 Pick the smallest tier that has what you need. Most container and networking work only needs **fiber** (process) or **thread** (system with LXC + kento tooling). VM-in-VM testing needs **sheet** / **yarn**. Cluster or HA testing needs **page** / **fabric**.
 
 Each image includes a `droste` user (UID 1000) with passwordless sudo.

@@ -29,7 +29,10 @@ dbus-system-bus-common
 # Authorization — needs D-Bus
 polkitd
 
-# Cloud metadata — no metadata endpoint in OCI
+# Cloud metadata — restored intentionally for first-boot config support
+# (kento Phase 3.5 NoCloud delivery, ConfigDrive on Proxmox/OpenStack,
+# user-data injection by other consumers). Datasource list pinned in
+# /etc/cloud/cloud.cfg.d/99-droste.cfg via oci/cloud-init-droste.cfg.
 cloud-init
 cloud-guest-utils
 cloud-utils
