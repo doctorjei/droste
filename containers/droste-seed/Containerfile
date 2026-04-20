@@ -1,0 +1,27 @@
+FROM ghcr.io/doctorjei/tenkei/canopy:1.4.0
+
+LABEL description="droste-seed: app base, FROM canopy + droste user"
+
+COPY containers/droste-seed/canopy-restore.txt /tmp/canopy-restore.txt
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends \
+       $(grep -v '^#' /tmp/canopy-restore.txt | grep -v '^$') \
+    && rm -f /tmp/canopy-restore.txt \
+    && rm -rf /var/lib/apt/lists/*
+
+# droste user (uid/gid 1000, NOPASSWD sudo)
+RUN groupadd -g 1000 droste \
+    && useradd -u 1000 -g droste -m -s /bin/bash droste \
+    && printf 'droste ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/droste \
+    && chmod 0440 /etc/sudoers.d/droste
+
+# Sysctl (content preserves pre-migration build-seed.sh behavior: IP forwarding
+# enabled so container/VM tiers can act as routers).
+RUN printf 'net.ipv4.ip_forward = 1\nnet.ipv6.conf.all.forwarding = 1\n' \
+    > /etc/sysctl.d/99-droste.conf
+
+# Locales: uncomment the same 15 locale variants build-seed.sh enabled, run locale-gen.
+RUN sed -i '/^# .*UTF-8/{ /en_US\|zh_CN\|zh_TW\|hi_IN\|es_ES\|ar_SA\|fr_FR\|bn_IN\|pt_BR\|pt_PT\|id_ID\|ur_PK\|de_DE\|ja_JP\|ko_KR/s/^# // }' /etc/locale.gen \
+    && locale-gen
+
+# No CMD — seed is init-less. Downstream tiers set their own.

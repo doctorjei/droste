@@ -6,8 +6,17 @@ bind9-libs
 cloud-image-utils
 dhcpcd-base
 dosfstools
+file
 gdisk
 genisoimage
+iproute2
+locales
+netcat-openbsd
+openssh-server
+openssh-sftp-server
+psmisc
 qemu-utils
 screen
 ssh-import-id
+sudo
+wget

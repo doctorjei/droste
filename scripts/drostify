@@ -229,16 +229,6 @@ do_build() {
         fi
     fi
 
-    # seed is built by build-seed.sh (chroot + import), not a Containerfile
-    if [[ "$tier" == "${LAYER_APP[0]}" ]]; then
-        echo "Building droste-${tier} (via build-seed.sh)..."
-        echo ""
-        "$PROJECT_DIR/containers/droste-${tier}/build-seed.sh"
-        echo ""
-        do_test "$tier"
-        return
-    fi
-
     # Map tier → parent image for BASE_IMAGE arg
     local parent
     parent=$(tier_parent "$tier")
