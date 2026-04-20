@@ -2,11 +2,21 @@ FROM ghcr.io/doctorjei/tenkei/canopy:1.4.0
 
 LABEL description="droste-seed: app base, FROM canopy + droste user"
 
-# Canopy ships /usr/bin/ln, /usr/bin/cp, /usr/bin/chmod, etc. as direct
-# symlinks to /usr/bin/busybox. Install coreutils in its own layer so the
-# GNU binaries replace those symlinks before the main restore list runs —
-# several postinsts (locales: `ln -r`, openssh-server: `cp -Z`, debianutils
-# triggers: `chmod/chown --reference`, `mv -Z`) use flags busybox lacks.
+# Canopy ships /usr/bin/ln, /usr/bin/cp, /usr/bin/chmod, etc. as symlinks to
+# /usr/bin/busybox and registers dpkg-divert rules routing coreutils/iproute2/
+# wget/etc. to `.distrib` paths so busybox can own the canonical names. Drostify
+# needs GNU binaries (postinsts use busybox-incompatible flags: `ln -r`, `cp -Z`,
+# `chmod --reference`, `mv -Z`). Remove the `.distrib` diversions so real
+# packages install where dpkg postinst scripts expect them. Leaves `.usr-is-merged`
+# and other non-busybox diversions alone.
+RUN while IFS= read -r orig && IFS= read -r div && IFS= read -r owner; do \
+        case "$div" in \
+            *.distrib) dpkg-divert --quiet --remove "$orig" || true ;; \
+        esac; \
+    done < /var/lib/dpkg/diversions
+
+# Install coreutils in its own layer so its GNU binaries replace the
+# busybox symlinks before any restore-list postinst runs.
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends coreutils \
     && rm -rf /var/lib/apt/lists/*
