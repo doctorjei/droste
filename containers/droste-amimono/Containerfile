@@ -1,10 +1,13 @@
 ARG BASE_IMAGE=droste-tapestry
+
+FROM ghcr.io/doctorjei/tenkei/tenkei-kernel:1.4.0 AS tenkei-kernel
+
 FROM ${BASE_IMAGE}
 
 LABEL description="droste-amimono: VM-bootable tapestry (kento VM mode)"
 
-COPY oci/vmlinuz /boot/vmlinuz
-COPY oci/initramfs.img /boot/initramfs.img
+COPY --from=tenkei-kernel /boot/vmlinuz /boot/vmlinuz
+COPY --from=tenkei-kernel /boot/initramfs.img /boot/initramfs.img
 
 # VM-only packages (not useful in system/LXC containers)
 RUN apt-get update \
