@@ -1,0 +1,13 @@
+# Packages stripped by canopy that droste-seed restores.
+# See plans/canopy-migration.md R7 for audit and rationale.
+# Verified against canopy:1.4.0 dpkg --get-selections (187 pkgs installed).
+bind9-host
+bind9-libs
+cloud-image-utils
+dhcpcd-base
+dosfstools
+gdisk
+genisoimage
+qemu-utils
+screen
+ssh-import-id
