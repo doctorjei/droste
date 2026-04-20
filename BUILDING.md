@@ -12,21 +12,24 @@ container, `drostify build thread` builds its system container sibling.
 
 ## OCI Builds
 
-Requires Podman. The seed base image must be built first (separately).
+Requires Podman. All tiers, including seed, build from Containerfiles.
 
 ### Building seed
 
-The seed is built by a standalone script that extracts the genericcloud
-qcow2 image, strips kernel/boot/init packages, creates the droste user,
-and imports the result into Podman. Requires root and nbd kernel module.
+Seed inherits from [tenkei](https://github.com/doctorjei/tenkei)'s
+`canopy` OCI image (pinned by semver in the Containerfile) and layers
+on the droste user, sysctl forwarding, locales, and a restore list for
+a handful of packages canopy strips that droste-seed still wants.
 
 ```bash
-sudo containers/droste-seed/build-seed.sh
+drostify build seed
 ```
+
+No root or qemu-nbd is required — `podman build` is sufficient.
 
 ### Building tiers
 
-Once seed exists, all other OCI tiers build via Containerfiles:
+All other OCI tiers build via Containerfiles the same way:
 
 ```bash
 drostify build fiber               # build fiber (process container)
@@ -49,10 +52,11 @@ drostify test all                  # test all OCI tiers
 
 ### VM-bootable OCI images
 
-The VM tier line adds kernel files (`/boot/vmlinuz` and `/boot/initramfs.img`),
-VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt tools,
-etc.), kernel module configs, password, and DHCP config on top of each system
-image, enabling boot via kento VM mode (QEMU + virtiofs).
+The VM tier line adds kernel files (`/boot/vmlinuz` and `/boot/initramfs.img`,
+copied from tenkei's `tenkei-kernel` OCI image via a multi-stage
+`COPY --from=`), VM-specific packages (qemu-guest-agent, watchdog, libvirt,
+nested virt tools, etc.), kernel module configs, password, and DHCP config
+on top of each system image, enabling boot via kento VM mode (QEMU + virtiofs).
 
 ```bash
 drostify build root                # build VM-bootable seed
@@ -146,13 +150,15 @@ with `@` are skipped.
 checks/              Check files (one per tier, tab-separated)
 scripts/             Build and test scripts (drostify, ssh-smoke-test.sh)
 containers/          OCI Containerfiles (one dir per tier)
-  droste-seed/       Seed build script + target package list
+  droste-seed/       Seed Containerfile + canopy-restore.txt
   droste-fiber/      Fiber Containerfile (app)
   droste-thread/     Thread Containerfile (system)
   droste-hair/       Hair Containerfile (VM)
   ...                (one directory per OCI tier)
 oci/                 OCI build support files
   seed-oci-exclude.txt  Packages stripped from seed (reinstalled in system tiers)
-  vmlinuz            Kernel for VM tiers
-  initramfs.img      Initramfs for VM tiers
 ```
+
+VM tiers pull `/boot/vmlinuz` and `/boot/initramfs.img` from tenkei's
+`tenkei-kernel` OCI image via multi-stage `COPY --from=` — no kernel
+files are checked into droste.

@@ -6,7 +6,7 @@ Nested virtualization images for testing infrastructure operations — container
 
 | Variant | Base | Use case | Init | Kernel |
 |---------|------|----------|------|--------|
-| **App** (paper) | genericcloud → seed | Process containers, CI/CD | None | Host kernel |
+| **App** (paper) | [canopy](https://github.com/doctorjei/tenkei) → seed | Process containers, CI/CD | None | Host kernel |
 | **System** (cloth) | App + init/systemd | System containers via [kento](https://pypi.org/project/kento/) | systemd | Host kernel |
 | **VM** (wool) | System + [tenkei](https://github.com/doctorjei/tenkei) kernel | VMs via [kento](https://pypi.org/project/kento/) VM mode | systemd | Own kernel |
 
@@ -18,7 +18,7 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 
 | Tier | Based on | Focus | Size |
 |------|----------|-------|------|
-| **seed** | genericcloud (stripped) | Minimal OCI base | 413 MB |
+| **seed** | canopy (tenkei) | Minimal OCI base | 413 MB |
 | **fiber** | seed | Basic tools, containers, networking | 1.02 GB |
 | **sheet** | fiber | Storage, VM tooling | 1.63 GB |
 | **page** | sheet | HA clustering, Ceph | 2.1 GB |

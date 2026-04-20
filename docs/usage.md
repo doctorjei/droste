@@ -109,8 +109,9 @@ qcow2, no conversion.
 
 1. **Kernel extraction.** Kento reads `/boot/vmlinuz` and `/boot/initramfs.img`
    from inside the OCI image. These are the
-   [tenkei](https://github.com/doctorjei/tenkei) kernel and initramfs, baked
-   into every VM tier's Containerfile via `COPY oci/vmlinuz /boot/vmlinuz`.
+   [tenkei](https://github.com/doctorjei/tenkei) kernel and initramfs, copied
+   into every VM tier's Containerfile from tenkei's `tenkei-kernel` OCI image
+   via a multi-stage `COPY --from=tenkei-kernel`.
 
 2. **virtiofsd.** Kento launches virtiofsd, which shares the OCI layers
    (mounted as overlayfs, same as LXC mode) to the guest VM via the virtio
