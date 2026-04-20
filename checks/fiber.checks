@@ -1,12 +1,9 @@
 @quiet seed.checks
 
 # Containers
-lxc-create available	lxc-create --version
 podman available	podman --version
 fuse-overlayfs available	fuse-overlayfs --version
 slirp4netns available	slirp4netns --version
-systemd-nspawn available	command -v systemd-nspawn
-machinectl available	command -v machinectl
 
 # Networking
 dnsmasq available	test -x /usr/sbin/dnsmasq

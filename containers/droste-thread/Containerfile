@@ -9,7 +9,7 @@ COPY oci/seed-oci-exclude.txt /tmp/seed-oci-exclude.txt
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
        $(grep -v '^#' /tmp/seed-oci-exclude.txt | grep -v '^$') \
-       ipvsadm molly-guard cifs-utils nfs-common fatrace lxcfs \
+       ipvsadm molly-guard cifs-utils nfs-common fatrace lxcfs lxc systemd-container \
     && rm -f /tmp/seed-oci-exclude.txt \
     && rm -rf /var/lib/apt/lists/*
 
@@ -18,5 +18,8 @@ RUN systemctl mask systemd-growfs-root.service systemd-remount-fs.service
 
 # Enable getty on /dev/console for LXC console access
 RUN systemctl enable getty@console.service
+
+# Kento (OCI → LXC/VM lifecycle tool)
+RUN pipx install --global kento
 
 CMD ["/sbin/init"]

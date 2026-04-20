@@ -16,3 +16,11 @@ IPv6 forwarding configured	grep -q 'net.ipv6.conf.all.forwarding = 1' /etc/sysct
 
 # Podman extras
 podman info runs	podman info --format '{{.Host.OS}}'
+
+# Container management (moved from fiber — requires systemd)
+lxc-create available	lxc-create --version
+systemd-nspawn available	command -v systemd-nspawn
+machinectl available	command -v machinectl
+
+# Kento (OCI lifecycle)
+kento available	kento --version

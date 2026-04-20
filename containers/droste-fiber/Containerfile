@@ -11,13 +11,13 @@ USER root
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
       # Containers
-      lxc podman fuse-overlayfs slirp4netns uidmap systemd-container \
+      podman fuse-overlayfs slirp4netns uidmap \
       # Networking
       dnsmasq nftables ipcalc \
       # Utilities
       jq rsync tmux smbclient git make \
       dnsutils tree unzip zip pipx htop patch bc \
-      inetutils-telnet ssh-import-id debootstrap sshpass xmlstarlet \
+      inetutils-telnet debootstrap sshpass xmlstarlet \
       lsof strace sysstat iotop iftop expect moreutils \
       rename entr jo whois sqlite3 atop etckeeper tftpd-hpa \
       # Remote FS (smbnetfs replaces cifs-utils; nfs-common excluded)

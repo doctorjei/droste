@@ -50,9 +50,9 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 | **stuffer** | loom | VM-bootable loom |
 | **stuffinator** | jacquard | VM-bootable jacquard |
 
-Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling.
+Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Cloth tiers from **thread** onward also include LXC + systemd-container management tools and have `kento` pre-installed (via pipx), making them capable of nested LXC/VM operations from within a booted tier. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling.
 
-Pick the smallest tier that has what you need. Most container and networking work only needs **fiber** / **thread**. VM-in-VM testing needs **sheet**. Cluster or HA testing needs **page** / **fabric**.
+Pick the smallest tier that has what you need. Most container and networking work only needs **fiber** (process) or **thread** (system with LXC + kento tooling). VM-in-VM testing needs **sheet** / **yarn**. Cluster or HA testing needs **page** / **fabric**.
 
 Each image includes a `droste` user (UID 1000) with passwordless sudo.
 App and system tiers have no login password (use `podman exec` or `lxc-attach`).
@@ -83,15 +83,17 @@ See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
 
 **Applications**: ```atop, bc, dnstop, htop, iftop, iotop, smbclient, sqlite3, tmux```
 
-**Filesystems**: ```acl, attr, cifs-utils, fatrace, inotify-tools, lsof, nfs-common, sshfs```
+**Filesystems**: ```acl, attr, inotify-tools, lsof, smbnetfs, sshfs```
 
-**General Utilities**: ```bsdextrautils, crudini, debootstrap, entr, expect, file, jo, jq, ltrace, make, moreutils, parallel, patch, psmisc, pv, pystrings (strings), rename, strace, sysstat, tree, unzip, xmlstarlet, xxd, zip```
+**General Utilities**: ```crudini, debootstrap, entr, expect, jo, jq, ltrace, make, moreutils, parallel, patch, pv, pystrings (strings), rename, strace, sysstat, tree, unzip, xmlstarlet, xxd, zip```
 
-**Networking**: ```conntrack, curl, dnsmasq, dnsutils, fping, git, inetutils-telnet, ipcalc, iproute2, ipset, iputils-arping, ipvsadm, netcat-openbsd, nftables, pipx, pyhttpd (httpd), rsync, socat, ssh-import-id, sshpass, tftpd-hpa, wget, whois, wireguard-tools```
+**Networking**: ```conntrack, dnsmasq, dnsutils, fping, git, inetutils-telnet, ipcalc, ipset, iputils-arping, nftables, pyhttpd (httpd), rsync, sshpass, tftpd-hpa, whois, wireguard-tools```
 
-**Virtualization**: ```fuse-overlayfs, lxc, lxcfs, podman, qemu-guest-agent, slirp4netns, systemd-container, uidmap```
+**Python**: ```pipx, python3-pip, python3-venv, uv```
 
-**System Tools**: ```etckeeper, locales, molly-guard, watchdog```
+**Virtualization**: ```fuse-overlayfs, podman, slirp4netns, uidmap```
+
+**System Tools**: ```etckeeper```
 
 ## droste-sheet: VM Management & Storage
 *(based on droste-fiber)*
@@ -168,3 +170,24 @@ See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
 
 This is a placeholder tier. No additional packages are installed yet.
 Planned for future inclusion: `proxmox-ve`, `zfsutils-linux`.
+
+## droste-thread: System Container Baseline
+*(based on droste-fiber + lint-equivalent systemd reinstall)*
+
+Thread is the first cloth L1+ tier. It adds kernel-dependent packages
+that only work with a real init system, LXC/systemd-container management
+tooling, and the `kento` lifecycle tool.
+
+### Tools in addition to droste-fiber (inherited) and lint (systemd reinstall)
+
+**Container management**: ```lxc, lxcfs, systemd-container```
+
+**Kernel-dependent**: ```cifs-utils, fatrace, ipvsadm, molly-guard, nfs-common```
+
+**Lifecycle tool**: ```kento``` (installed via `pipx install --global` —
+available at `/usr/local/bin/kento`)
+
+Inherited by all downstream cloth tiers (yarn, fabric, tapestry, loom,
+jacquard) and all VM L1+ tiers (hair, wool, felt, amimono, stuffer,
+stuffinator) via the tier inheritance chain. **lint** (cloth L0) and
+**root** (wool L0) stay minimal and do not include these.

@@ -31,7 +31,11 @@ OCI images. No init system, no services — run a command and exit.
 
 **System tiers** (lint, thread, yarn, fabric, tapestry, loom, jacquard) add
 init/systemd and kernel-dependent packages. They boot as LXC system containers
-with systemd as PID 1. Persistent across restarts.
+with systemd as PID 1. Persistent across restarts. Tiers from **thread** onward
+also include LXC management tooling (lxc, systemd-container) and have `kento`
+pre-installed, enabling nested LXC/VM operations from within a booted tier.
+**lint** (the minimal system base) does not — use it for pure LXC boot testing
+without nested-container needs.
 
 **VM tiers** (root, hair, wool, felt, amimono, stuffer, stuffinator) add a
 [tenkei](https://github.com/doctorjei/tenkei) kernel and initramfs, VM-specific
@@ -91,7 +95,11 @@ same config, but with an init system that can boot.
 System tiers also add kernel-dependent packages that don't work in process
 containers (e.g., ipvsadm, cifs-utils, lvm2, drbd-utils). These packages
 need kernel modules that are accessible via LXC's shared kernel but not
-available in OCI's isolated namespace.
+available in OCI's isolated namespace. From **thread** onward, cloth tiers
+also include `lxc` and `systemd-container` management tooling plus the
+`kento` CLI (installed via `pipx install --global`, available at
+`/usr/local/bin/kento`). This lets a booted cloth or wool tier spawn its
+own nested LXC containers or VMs.
 
 ### OCI → VM (kento + tenkei)
 
@@ -175,6 +183,9 @@ When the command exits, the container is removed (`--rm`).
 ## Running System Containers
 
 System containers require [kento](https://pypi.org/project/kento/) (`pip install kento`).
+Kento is also pre-installed in all thread+ cloth tiers and all hair+ VM tiers,
+so you can run `kento` from within a booted container or VM without installing
+it there.
 
 ### Create and start
 
