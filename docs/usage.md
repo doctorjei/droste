@@ -129,16 +129,16 @@ qcow2, no conversion.
    filesystem — it boots into `/sbin/init` (systemd) exactly as if it were
    installed on a local disk.
 
-5. **VM boot fixes.** Raw OCI images would fail to boot as VMs for three
+5. **VM boot fixes.** Raw OCI images would fail to boot as VMs for two
    reasons. Each VM tier's Containerfile addresses them:
-   - **fstab**: the genericcloud base has UUID-based entries for disks that
-     don't exist in a virtiofs environment. Cleared with `> /etc/fstab`.
    - **Password**: the droste user has no password in app/system tiers
      (locked account). VMs need console/SSH login, so VM tiers set
      `droste:droste` via chpasswd.
    - **DHCP**: no network config exists by default. VM tiers create a
      systemd-networkd config for DHCP on any ethernet interface
      (`[Match] Type=ether`) and enable the service.
+
+   (fstab is already empty in the canopy base — no fstab clearing needed.)
 
 **Why VM tiers exist separately:** System tiers could theoretically boot as
 VMs if you added kernel files. VM tiers formalize this by including the tenkei
