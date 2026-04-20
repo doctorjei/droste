@@ -1,6 +1,8 @@
 # Packages stripped by canopy that droste-seed restores.
 # See plans/canopy-migration.md R7 for audit and rationale.
 # Verified against canopy:1.4.0 dpkg --get-selections (187 pkgs installed).
+# 1.4.1 only adds systemd-resolved to canopy's PURGELIST per tenkei release
+# notes; not in this list, so 1.4.1-compatible without re-verification.
 # Note: coreutils is installed in a prior RUN layer in the Containerfile
 # (must beat other postinsts to /usr/bin/ln etc.), not listed here.
 bind9-host
