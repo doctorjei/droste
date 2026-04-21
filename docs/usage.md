@@ -281,9 +281,15 @@ Pick the smallest tier that has what you need:
 | Basic containers, networking, CI | fiber | thread | hair |
 | Storage, libvirt, QEMU | sheet | yarn | wool |
 | HA clustering, Ceph, DRBD | page | fabric | felt |
-| Testing, security, monitoring | tome | tapestry | amimono |
-| C/C++ development | press | loom | stuffer |
+| Testing, security, monitoring (incl. pytest) | tome | tapestry | amimono |
+| C/C++ + kernel/initramfs build | press | loom | stuffer |
 | Proxmox VE | gutenberg | jacquard | stuffinator |
+
+**Wool L2+ tiers** (wool, felt, amimono, stuffer, stuffinator) include
+`qemu-system-x86` + `virtiofsd` and place the `droste` user in the `kvm`
+group, so a booted droste VM can host nested VMs (e.g., `kento create --vm`
+from inside). **wool L0/L1** (root, hair) stay minimal — they boot as VMs
+themselves but can't host nested VMs.
 
 **seed / lint / root** are minimal base images with no additional tools.
 Use them for custom builds or as starting points for your own Containerfiles.
@@ -295,6 +301,9 @@ Use them for custom builds or as starting points for your own Containerfiles.
 | **App** (paper) | droste | *(none)* | passwordless | `podman exec`, `podman run` |
 | **System** (cloth) | droste | *(none)* | passwordless | `lxc-attach`, SSH (key-based) |
 | **VM** (wool) | droste | `droste` | via sudo group | SSH (password or key), serial console |
+
+The `droste` user in **wool L2+ tiers** is also a member of the `kvm`
+group, so it can use `/dev/kvm` directly for nested KVM workloads.
 
 App and system tiers have no login password set — use `podman exec` or
 `lxc-attach` for interactive access. SSH works on system tiers if you
