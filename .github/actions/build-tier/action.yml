@@ -38,5 +38,14 @@ runs:
           ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:latest
           ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:${{ github.sha }}
         build-args: ${{ inputs.base-tier != '' && format('BASE_IMAGE=ghcr.io/{0}/droste-{1}:{2}', github.repository_owner, inputs.base-tier, github.sha) || '' }}
-        cache-from: type=gha,scope=${{ inputs.tier }}
-        cache-to: type=gha,mode=max,scope=${{ inputs.tier }}
+        # Cache scope folds in a hash of every build input that can change
+        # image content: tier Containerfiles, seed's canopy-restore.txt,
+        # and oci/**. Without this, a change to a parent tier's Containerfile
+        # (e.g., a new RUN in lint) could leave downstream scopes pointing at
+        # layer blobs predating the change — BuildKit reuses them and the
+        # new instruction never executes. Keying on content hash forces a
+        # fresh scope whenever any input changes, invalidating all tiers'
+        # caches together. Check files aren't hashed; they don't affect
+        # image content.
+        cache-from: type=gha,scope=${{ inputs.tier }}-${{ hashFiles('containers/droste-*/Containerfile', 'containers/droste-*/*.txt', 'oci/**') }}
+        cache-to: type=gha,mode=max,scope=${{ inputs.tier }}-${{ hashFiles('containers/droste-*/Containerfile', 'containers/droste-*/*.txt', 'oci/**') }}
