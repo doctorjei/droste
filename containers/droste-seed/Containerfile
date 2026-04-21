@@ -22,9 +22,9 @@ RUN while IFS= read -r orig && IFS= read -r div && IFS= read -r owner; do \
 # in by press). When busybox gets removed, its postrm invokes `diff` via
 # dpkg — and /usr/bin/diff is a busybox symlink until diffutils is
 # installed. coreutils covers ln/cp/chmod/etc.; grep is needed because
-# ucfr (from ucf, pulled in by openssh-server) uses `grep --count` which
-# busybox rejects. sed/findutils/gzip preempt similar failures common in
-# Debian postinst scripts.
+# ucf's `ucfr` helper (pulled in transitively by several postinsts) uses
+# `grep --count`, which busybox rejects. sed/findutils/gzip preempt
+# similar failures common in Debian postinst scripts.
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
        coreutils grep sed findutils gzip diffutils \

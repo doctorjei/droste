@@ -14,11 +14,6 @@ killall available	command -v killall
 hexdump available	hexdump --version
 iproute2 (ip command)	ip -V
 
-# SSH
-openssh-server installed	dpkg -s openssh-server
-openssh-sftp-server installed	test -x /usr/lib/openssh/sftp-server
-ssh-import-id available	command -v ssh-import-id
-
 # Cloud / VM tools (kept in OCI)
 qemu-img available	command -v qemu-img
 cloud-localds available	command -v cloud-localds

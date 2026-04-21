@@ -5,6 +5,19 @@
 # notes; not in this list, so 1.4.1-compatible without re-verification.
 # Note: coreutils is installed in a prior RUN layer in the Containerfile
 # (must beat other postinsts to /usr/bin/ln etc.), not listed here.
+#
+# Intentionally NOT restored at seed (deferred to lint via
+# oci/seed-oci-exclude.txt): openssh-server, openssh-sftp-server,
+# ssh-import-id. These ship systemd units and need deb-systemd-helper
+# (part of init-system-helpers, purged by canopy) for their postinsts
+# to enable services correctly. Installing them at seed — where systemd
+# is absent — produces silent half-broken enable state that can't be
+# recovered by a later `systemctl enable`. Canopy clusters init-family
+# + openssh together in its PURGELIST for exactly this reason; we
+# restore them together at lint where systemd + init-system-helpers
+# land in the same apt transaction. App tiers (fiber/sheet/page/etc.)
+# inherit from seed and don't need sshd (process containers), so they
+# stay lean.
 bind9-host
 bind9-libs
 cloud-image-utils
@@ -16,11 +29,8 @@ genisoimage
 iproute2
 locales
 netcat-openbsd
-openssh-server
-openssh-sftp-server
 psmisc
 qemu-utils
 screen
-ssh-import-id
 sudo
 wget
