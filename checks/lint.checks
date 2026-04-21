@@ -30,3 +30,8 @@ systemd-remount-fs masked	test -L /etc/systemd/system/systemd-remount-fs.service
 
 # LXC console access
 getty@console enabled	test -L /etc/systemd/system/getty.target.wants/getty@console.service
+
+# Network + SSH enabled (seed's openssh-server install ran before systemd
+# was present; lint layer re-enables after systemd lands)
+ssh.service enabled	test -L /etc/systemd/system/multi-user.target.wants/ssh.service
+systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service

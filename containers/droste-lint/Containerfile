@@ -23,4 +23,18 @@ RUN systemctl mask systemd-growfs-root.service systemd-remount-fs.service
 # Enable getty on /dev/console for LXC console access
 RUN systemctl enable getty@console.service
 
+# Enable ssh.service and systemd-networkd at the lint layer.
+# openssh-server is installed in seed, but at that point systemd isn't
+# present yet — deb-systemd-helper's postinst no-ops without the systemd
+# directory tree, so the enable symlink is never created. Re-enabling
+# here (after systemd-sysv lands via seed-oci-exclude.txt) creates
+# /etc/systemd/system/multi-user.target.wants/ssh.service.
+#
+# systemd-networkd is preset: enabled but only applied by systemd-preset
+# on first boot via systemd-update-done, which may not run in all
+# container lifecycles. Kento's provisioning drops .network files into
+# /etc/systemd/network/ and expects networkd to be running; an explicit
+# enable here guarantees that regardless of first-boot preset timing.
+RUN systemctl enable ssh.service systemd-networkd.service
+
 CMD ["/sbin/init"]
