@@ -13,7 +13,7 @@ COPY --from=tenkei-kernel /boot/initramfs.img /boot/initramfs.img
 RUN apt-get update \
     && apt-get install -y -qq --no-install-recommends \
        qemu-guest-agent watchdog \
-       qemu-system-x86 swtpm ovmf libvirt-daemon-system virtinst nbdkit \
+       qemu-system-x86 virtiofsd swtpm ovmf libvirt-daemon-system virtinst nbdkit \
        nfs-kernel-server cpu-checker irqbalance linux-cpupower \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,6 +28,7 @@ RUN systemctl unmask systemd-growfs-root.service systemd-remount-fs.service
 # VM boot fixes: set login password, enable DHCP + serial console
 RUN echo 'droste:droste' | chpasswd \
     && usermod -aG sudo droste \
+    && usermod -aG kvm droste \
     && mkdir -p /etc/systemd/network \
     && printf '[Match]\nType=ether\n\n[Network]\nDHCP=yes\n' \
        > /etc/systemd/network/80-dhcp.network \

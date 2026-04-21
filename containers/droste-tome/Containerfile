@@ -16,6 +16,7 @@ RUN apt-get -qq update \
       lynis aide \
       arp-scan tcpreplay auditd \
       blktrace xorriso ipmitool \
+      python3-pytest \
     && rm -rf /var/lib/apt/lists/*
 
 # tshark installed individually (large package, ~124 MB)

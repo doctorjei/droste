@@ -8,6 +8,7 @@ slirp4netns available	slirp4netns --version
 # Networking
 dnsmasq available	test -x /usr/sbin/dnsmasq
 nftables available	sudo nft --version
+iptables available	command -v iptables
 ipcalc available	ipcalc --version
 
 # Utilities
@@ -16,6 +17,7 @@ rsync available	rsync --version
 tmux available	tmux -V
 smbclient available	smbclient --version
 git available	git --version
+gh available	gh --version
 make available	make --version
 dig available	dig -v
 tree available	tree --version

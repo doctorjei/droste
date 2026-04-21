@@ -11,6 +11,10 @@ RUN apt-get -qq update \
       autoconf automake libtool \
       gdb valgrind \
       ccache ninja-build bear \
+      bison flex \
+      libelf-dev libssl-dev libncurses-dev \
+      cpio busybox-static \
+      shellcheck \
     && rm -rf /var/lib/apt/lists/*
 
 USER droste

@@ -49,3 +49,6 @@ redis-cli available	command -v redis-cli
 lynis available	command -v lynis
 aide available	command -v aide
 auditctl available	command -v auditctl
+
+# Python testing
+pytest available	command -v pytest || python3 -m pytest --version

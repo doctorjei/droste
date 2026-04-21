@@ -13,9 +13,9 @@ RUN apt-get -qq update \
       # Containers
       podman fuse-overlayfs slirp4netns uidmap \
       # Networking
-      dnsmasq nftables ipcalc \
+      dnsmasq nftables iptables ipcalc \
       # Utilities
-      jq rsync tmux smbclient git make \
+      jq rsync tmux smbclient git gh make \
       dnsutils tree unzip zip pipx htop patch bc \
       inetutils-telnet debootstrap sshpass xmlstarlet \
       lsof strace sysstat iotop iftop expect moreutils \

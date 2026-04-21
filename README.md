@@ -50,7 +50,7 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 | **stuffer** | loom | VM-bootable loom |
 | **stuffinator** | jacquard | VM-bootable jacquard |
 
-Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Cloth tiers from **thread** onward also include LXC + systemd-container management tools and have `kento` pre-installed (via pipx), making them capable of nested LXC/VM operations from within a booted tier. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling.
+Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Cloth tiers from **thread** onward also include LXC + systemd-container management tools and have `kento` pre-installed (via pipx), making them capable of nested LXC/VM operations from within a booted tier. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling. Wool L2+ tiers (wool, felt, amimono, stuffer, stuffinator) also add `qemu-system-x86` + `virtiofsd` and place the `droste` user in the `kvm` group, so they can host nested VMs (e.g., `kento create --vm` from inside a booted droste VM).
 
 All system and VM tiers ship with `cloud-init` for declarative first-boot configuration, with a default datasource list of `[NoCloud, ConfigDrive, None]` (override via `/etc/cloud/cloud.cfg.d/`). See [docs/usage.md](docs/usage.md#first-boot-configuration-cloud-init).
 
@@ -89,7 +89,7 @@ See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
 
 **General Utilities**: ```crudini, debootstrap, entr, expect, jo, jq, ltrace, make, moreutils, parallel, patch, pv, pystrings (strings), rename, strace, sysstat, tree, unzip, xmlstarlet, xxd, zip```
 
-**Networking**: ```conntrack, dnsmasq, dnsutils, fping, git, inetutils-telnet, ipcalc, ipset, iputils-arping, nftables, pyhttpd (httpd), rsync, sshpass, tftpd-hpa, whois, wireguard-tools```
+**Networking**: ```conntrack, dnsmasq, dnsutils, fping, gh, git, inetutils-telnet, ipcalc, ipset, iptables, iputils-arping, nftables, pyhttpd (httpd), rsync, sshpass, tftpd-hpa, whois, wireguard-tools```
 
 **Python**: ```pipx, python3-pip, python3-venv, uv```
 
@@ -154,6 +154,8 @@ See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
 
 **Hardware**: ```ipmitool```
 
+**Testing**: ```python3-pytest```
+
 ## droste-press: C/C++ Development Toolchain
 *(based on droste-tome)*
 
@@ -166,6 +168,10 @@ See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
 **Debugging**: ```gdb, valgrind```
 
 **General Utilities**: ```bear, ccache```
+
+**Kernel/initramfs Build**: ```bison, busybox-static, cpio, flex, libelf-dev, libncurses-dev, libssl-dev```
+
+**Shell Linting**: ```shellcheck```
 
 ## droste-gutenberg: Placeholder
 *(based on droste-press)*
