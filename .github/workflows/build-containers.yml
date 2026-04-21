@@ -6,345 +6,234 @@ on:
     paths:
       - 'containers/**'
       - 'oci/seed-oci-exclude.txt'
+      - '.github/actions/build-tier/**'
+      - '.github/workflows/build-containers.yml'
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-
 # droste-seed builds FROM ghcr.io/doctorjei/tenkei/canopy (pinned in its
-# Containerfile). All tiers are built here; seed runs first so downstream
-# steps can pull it by :${{ github.sha }}.
+# Containerfile). Every other tier pulls its parent by :${{ github.sha }},
+# so jobs use `needs:` to mirror the dependency tree. That way a rerun of
+# a failed leaf job skips the ancestors that already succeeded, and tiers
+# at the same depth build in parallel.
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  build:
+  # Depth 0: no parent tier
+  seed:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          tier: seed
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # ── seed (← canopy:1.4.1) ────────────────────────────────────
-      - name: Build and push seed
-        uses: docker/build-push-action@v6
+  # Depth 1: children of seed
+  lint:
+    runs-on: ubuntu-latest
+    needs: seed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-seed/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:${{ github.sha }}
-          cache-from: type=gha,scope=seed
-          cache-to: type=gha,mode=max,scope=seed
+          tier: lint
+          base-tier: seed
 
-      # ── lint (← seed:sha) ─────────────────────────────────────────
-      - name: Build and push lint
-        uses: docker/build-push-action@v6
+  fiber:
+    runs-on: ubuntu-latest
+    needs: seed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-lint/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-lint:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-lint:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:${{ github.sha }}
-          cache-from: type=gha,scope=lint
-          cache-to: type=gha,mode=max,scope=lint
+          tier: fiber
+          base-tier: seed
 
-      # ── root (← lint:sha) ────────────────────────────────────────
-      - name: Build and push root
-        uses: docker/build-push-action@v6
+  # Depth 2
+  root:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-root/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-root:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-root:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-lint:${{ github.sha }}
-          cache-from: type=gha,scope=root
-          cache-to: type=gha,mode=max,scope=root
+          tier: root
+          base-tier: lint
 
-      # ── fiber (← seed:sha) ───────────────────────────────────────
-      - name: Build and push fiber
-        uses: docker/build-push-action@v6
+  thread:
+    runs-on: ubuntu-latest
+    needs: fiber
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-fiber/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-seed:${{ github.sha }}
-          cache-from: type=gha,scope=fiber
-          cache-to: type=gha,mode=max,scope=fiber
+          tier: thread
+          base-tier: fiber
 
-      # ── thread (← fiber:sha) ─────────────────────────────────────
-      - name: Build and push thread
-        uses: docker/build-push-action@v6
+  sheet:
+    runs-on: ubuntu-latest
+    needs: fiber
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-thread/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-thread:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-thread:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
-          cache-from: type=gha,scope=thread
-          cache-to: type=gha,mode=max,scope=thread
+          tier: sheet
+          base-tier: fiber
 
-      # ── hair (← thread:sha) ──────────────────────────────────────
-      - name: Build and push hair
-        uses: docker/build-push-action@v6
+  # Depth 3
+  hair:
+    runs-on: ubuntu-latest
+    needs: thread
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-hair/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-hair:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-thread:${{ github.sha }}
-          cache-from: type=gha,scope=hair
-          cache-to: type=gha,mode=max,scope=hair
+          tier: hair
+          base-tier: thread
 
-      # ── sheet (← fiber:sha) ──────────────────────────────────────
-      - name: Build and push sheet
-        uses: docker/build-push-action@v6
+  yarn:
+    runs-on: ubuntu-latest
+    needs: sheet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-sheet/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fiber:${{ github.sha }}
-          cache-from: type=gha,scope=sheet
-          cache-to: type=gha,mode=max,scope=sheet
+          tier: yarn
+          base-tier: sheet
 
-      # ── yarn (← sheet:sha) ───────────────────────────────────────
-      - name: Build and push yarn
-        uses: docker/build-push-action@v6
+  page:
+    runs-on: ubuntu-latest
+    needs: sheet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-yarn/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-yarn:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-yarn:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:${{ github.sha }}
-          cache-from: type=gha,scope=yarn
-          cache-to: type=gha,mode=max,scope=yarn
+          tier: page
+          base-tier: sheet
 
-      # ── wool (← yarn:sha) ────────────────────────────────────────
-      - name: Build and push wool
-        uses: docker/build-push-action@v6
+  # Depth 4
+  wool:
+    runs-on: ubuntu-latest
+    needs: yarn
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-wool/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-wool:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-wool:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-yarn:${{ github.sha }}
-          cache-from: type=gha,scope=wool
-          cache-to: type=gha,mode=max,scope=wool
+          tier: wool
+          base-tier: yarn
 
-      # ── page (← sheet:sha) ───────────────────────────────────────
-      - name: Build and push page
-        uses: docker/build-push-action@v6
+  fabric:
+    runs-on: ubuntu-latest
+    needs: page
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-page/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-sheet:${{ github.sha }}
-          cache-from: type=gha,scope=page
-          cache-to: type=gha,mode=max,scope=page
+          tier: fabric
+          base-tier: page
 
-      # ── fabric (← page:sha) ──────────────────────────────────────
-      - name: Build and push fabric
-        uses: docker/build-push-action@v6
+  tome:
+    runs-on: ubuntu-latest
+    needs: page
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-fabric/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fabric:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fabric:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:${{ github.sha }}
-          cache-from: type=gha,scope=fabric
-          cache-to: type=gha,mode=max,scope=fabric
+          tier: tome
+          base-tier: page
 
-      # ── felt (← fabric:sha) ──────────────────────────────────────
-      - name: Build and push felt
-        uses: docker/build-push-action@v6
+  # Depth 5
+  felt:
+    runs-on: ubuntu-latest
+    needs: fabric
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-felt/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-felt:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-felt:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-fabric:${{ github.sha }}
-          cache-from: type=gha,scope=felt
-          cache-to: type=gha,mode=max,scope=felt
+          tier: felt
+          base-tier: fabric
 
-      # ── tome (← page:sha) ────────────────────────────────────────
-      - name: Build and push tome
-        uses: docker/build-push-action@v6
+  tapestry:
+    runs-on: ubuntu-latest
+    needs: tome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-tome/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-page:${{ github.sha }}
-          cache-from: type=gha,scope=tome
-          cache-to: type=gha,mode=max,scope=tome
+          tier: tapestry
+          base-tier: tome
 
-      # ── tapestry (← tome:sha) ────────────────────────────────────
-      - name: Build and push tapestry
-        uses: docker/build-push-action@v6
+  press:
+    runs-on: ubuntu-latest
+    needs: tome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-tapestry/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tapestry:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tapestry:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:${{ github.sha }}
-          cache-from: type=gha,scope=tapestry
-          cache-to: type=gha,mode=max,scope=tapestry
+          tier: press
+          base-tier: tome
 
-      # ── amimono (← tapestry:sha) ─────────────────────────────────
-      - name: Build and push amimono
-        uses: docker/build-push-action@v6
+  # Depth 6
+  amimono:
+    runs-on: ubuntu-latest
+    needs: tapestry
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-amimono/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-amimono:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-amimono:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tapestry:${{ github.sha }}
-          cache-from: type=gha,scope=amimono
-          cache-to: type=gha,mode=max,scope=amimono
+          tier: amimono
+          base-tier: tapestry
 
-      # ── press (← tome:sha) ───────────────────────────────────────
-      - name: Build and push press
-        uses: docker/build-push-action@v6
+  loom:
+    runs-on: ubuntu-latest
+    needs: press
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-press/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-tome:${{ github.sha }}
-          cache-from: type=gha,scope=press
-          cache-to: type=gha,mode=max,scope=press
+          tier: loom
+          base-tier: press
 
-      # ── loom (← press:sha) ───────────────────────────────────────
-      - name: Build and push loom
-        uses: docker/build-push-action@v6
+  gutenberg:
+    runs-on: ubuntu-latest
+    needs: press
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-loom/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-loom:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-loom:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:${{ github.sha }}
-          cache-from: type=gha,scope=loom
-          cache-to: type=gha,mode=max,scope=loom
+          tier: gutenberg
+          base-tier: press
 
-      # ── stuffer (← loom:sha) ─────────────────────────────────────
-      - name: Build and push stuffer
-        uses: docker/build-push-action@v6
+  # Depth 7
+  stuffer:
+    runs-on: ubuntu-latest
+    needs: loom
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-stuffer/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffer:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffer:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-loom:${{ github.sha }}
-          cache-from: type=gha,scope=stuffer
-          cache-to: type=gha,mode=max,scope=stuffer
+          tier: stuffer
+          base-tier: loom
 
-      # ── gutenberg (← press:sha) ──────────────────────────────────
-      - name: Build and push gutenberg
-        uses: docker/build-push-action@v6
+  jacquard:
+    runs-on: ubuntu-latest
+    needs: gutenberg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-gutenberg/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-press:${{ github.sha }}
-          cache-from: type=gha,scope=gutenberg
-          cache-to: type=gha,mode=max,scope=gutenberg
+          tier: jacquard
+          base-tier: gutenberg
 
-      # ── jacquard (← gutenberg:sha) ───────────────────────────────
-      - name: Build and push jacquard
-        uses: docker/build-push-action@v6
+  # Depth 8
+  stuffinator:
+    runs-on: ubuntu-latest
+    needs: jacquard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tier
         with:
-          context: .
-          file: containers/droste-jacquard/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-jacquard:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-jacquard:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-gutenberg:${{ github.sha }}
-          cache-from: type=gha,scope=jacquard
-          cache-to: type=gha,mode=max,scope=jacquard
-
-      # ── stuffinator (← jacquard:sha) ─────────────────────────────
-      - name: Build and push stuffinator
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: containers/droste-stuffinator/Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffinator:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-stuffinator:${{ github.sha }}
-          build-args: |
-            BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/droste-jacquard:${{ github.sha }}
-          cache-from: type=gha,scope=stuffinator
-          cache-to: type=gha,mode=max,scope=stuffinator
+          tier: stuffinator
+          base-tier: jacquard

@@ -1,0 +1,42 @@
+name: Build droste tier
+description: >
+  Log in to GHCR, set up Buildx, and build+push a single droste tier image.
+  Optionally passes a BASE_IMAGE build-arg pointing at a parent tier pinned
+  by the current commit SHA. Caches per-tier via GitHub Actions cache.
+
+inputs:
+  tier:
+    description: Tier name (e.g. seed, fiber, wool). Used for Containerfile path and image name.
+    required: true
+  base-tier:
+    description: >
+      Parent tier name (e.g. seed). Leave empty for tiers with no parent
+      (only droste-seed — it builds FROM canopy, not another droste tier).
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push ${{ inputs.tier }}
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: containers/droste-${{ inputs.tier }}/Containerfile
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:latest
+          ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:${{ github.sha }}
+        build-args: ${{ inputs.base-tier != '' && format('BASE_IMAGE=ghcr.io/{0}/droste-{1}:{2}', github.repository_owner, inputs.base-tier, github.sha) || '' }}
+        cache-from: type=gha,scope=${{ inputs.tier }}
+        cache-to: type=gha,mode=max,scope=${{ inputs.tier }}
