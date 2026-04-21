@@ -24,17 +24,36 @@ RUN systemctl mask systemd-growfs-root.service systemd-remount-fs.service
 RUN systemctl enable getty@console.service
 
 # Enable ssh.service and systemd-networkd at the lint layer.
-# openssh-server is installed in seed, but at that point systemd isn't
-# present yet — deb-systemd-helper's postinst no-ops without the systemd
-# directory tree, so the enable symlink is never created. Re-enabling
-# here (after systemd-sysv lands via seed-oci-exclude.txt) creates
-# /etc/systemd/system/multi-user.target.wants/ssh.service.
 #
-# systemd-networkd is preset: enabled but only applied by systemd-preset
-# on first boot via systemd-update-done, which may not run in all
-# container lifecycles. Kento's provisioning drops .network files into
-# /etc/systemd/network/ and expects networkd to be running; an explicit
-# enable here guarantees that regardless of first-boot preset timing.
-RUN systemctl enable ssh.service systemd-networkd.service
+# openssh-server is installed at seed (canopy-restore.txt) while systemd
+# is still stripped; its deb-systemd-helper postinst no-ops because the
+# systemd state tree isn't initialized. Later `systemctl enable` calls
+# at this layer also silently no-op — even after systemd-sysv lands via
+# seed-oci-exclude.txt, the helper state flags set at seed leave the
+# enable indirection broken. (Phase B Test 2 regression, 2026-04-21:
+# `systemctl enable ssh.service systemd-networkd.service` at this layer
+# produced zero symlinks in the rootfs.)
+#
+# Fix: create the enable symlinks directly. This is exactly what a
+# working `systemctl enable` does internally, and the WantedBy=multi-
+# user.target install path for these services has been stable for 15+
+# years. The inline `test -L` assertions after the links fail the build
+# immediately if a regression breaks this — so a silent no-op cannot
+# ship to GHCR again.
+#
+# systemd-networkd is also preset: enabled, but preset only applies on
+# first boot via systemd-update-done; container lifecycles that skip
+# first-boot (existing /etc/machine-id from build) leave it disabled.
+# kento drops .network files into /etc/systemd/network/ expecting
+# networkd to be running, so we guarantee it regardless of preset.
+RUN mkdir -p /etc/systemd/system/multi-user.target.wants \
+    && test -f /usr/lib/systemd/system/ssh.service \
+    && test -f /usr/lib/systemd/system/systemd-networkd.service \
+    && ln -sf /usr/lib/systemd/system/ssh.service \
+              /etc/systemd/system/multi-user.target.wants/ssh.service \
+    && ln -sf /usr/lib/systemd/system/systemd-networkd.service \
+              /etc/systemd/system/multi-user.target.wants/systemd-networkd.service \
+    && test -L /etc/systemd/system/multi-user.target.wants/ssh.service \
+    && test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
 
 CMD ["/sbin/init"]
