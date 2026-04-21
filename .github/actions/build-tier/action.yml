@@ -1,8 +1,13 @@
-name: Build droste tier
+name: Build, check, and push droste tier
 description: >
-  Log in to GHCR, set up Buildx, and build+push a single droste tier image.
-  Optionally passes a BASE_IMAGE build-arg pointing at a parent tier pinned
-  by the current commit SHA. Caches per-tier via GitHub Actions cache.
+  Build a single droste tier into the local docker daemon, run its
+  drostify check file against the built image, and push to GHCR only
+  if checks pass. Optionally passes a BASE_IMAGE build-arg pointing at
+  a parent tier pinned by the current commit SHA. Caches per-tier via
+  GHA cache; scope folds in a hash of every image-content input so a
+  change anywhere in containers/** or oci/** invalidates all tiers'
+  caches together (prevents stale-layer reuse when a parent tier's
+  Containerfile changes).
 
 inputs:
   tier:
@@ -28,24 +33,40 @@ runs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build and push ${{ inputs.tier }}
+    # Build into the local docker daemon (load=true) rather than pushing
+    # directly. This lets the check step run `docker exec` against the
+    # built image before any tag hits GHCR. If checks fail, the push
+    # step is skipped (needs: chain will also stop downstream builds).
+    - name: Build and load ${{ inputs.tier }}
       uses: docker/build-push-action@v6
       with:
         context: .
         file: containers/droste-${{ inputs.tier }}/Containerfile
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:latest
-          ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:${{ github.sha }}
+        load: true
+        tags: droste-${{ inputs.tier }}:latest
         build-args: ${{ inputs.base-tier != '' && format('BASE_IMAGE=ghcr.io/{0}/droste-{1}:{2}', github.repository_owner, inputs.base-tier, github.sha) || '' }}
-        # Cache scope folds in a hash of every build input that can change
-        # image content: tier Containerfiles, seed's canopy-restore.txt,
-        # and oci/**. Without this, a change to a parent tier's Containerfile
-        # (e.g., a new RUN in lint) could leave downstream scopes pointing at
-        # layer blobs predating the change — BuildKit reuses them and the
-        # new instruction never executes. Keying on content hash forces a
-        # fresh scope whenever any input changes, invalidating all tiers'
-        # caches together. Check files aren't hashed; they don't affect
-        # image content.
         cache-from: type=gha,scope=${{ inputs.tier }}-${{ hashFiles('containers/droste-*/Containerfile', 'containers/droste-*/*.txt', 'oci/**') }}
         cache-to: type=gha,mode=max,scope=${{ inputs.tier }}-${{ hashFiles('containers/droste-*/Containerfile', 'containers/droste-*/*.txt', 'oci/**') }}
+
+    # drostify test starts the container with `sleep infinity`, execs
+    # each check line against it (own file + @quiet inherited files),
+    # and exits non-zero on any failure. File-system checks (symlinks,
+    # fstab, dpkg-installed packages, config contents) all work this
+    # way regardless of tier type.
+    - name: Run drostify checks against ${{ inputs.tier }}
+      shell: bash
+      run: scripts/drostify test ${{ inputs.tier }}
+
+    - name: Tag for GHCR
+      shell: bash
+      run: |
+        docker tag droste-${{ inputs.tier }}:latest \
+          ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:latest
+        docker tag droste-${{ inputs.tier }}:latest \
+          ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:${{ github.sha }}
+
+    - name: Push to GHCR
+      shell: bash
+      run: |
+        docker push ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:latest
+        docker push ghcr.io/${{ github.repository_owner }}/droste-${{ inputs.tier }}:${{ github.sha }}
