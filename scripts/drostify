@@ -72,6 +72,13 @@ tier_parent() {
 }
 
 detect_container_cmd() {
+    # Explicit override for environments where both runtimes are present
+    # but only one sees the image (e.g. CI where docker/build-push-action
+    # loads into docker but the runner also has podman).
+    if [[ -n "${CONTAINER_CMD:-}" ]]; then
+        echo "$CONTAINER_CMD"
+        return
+    fi
     if command -v podman &>/dev/null; then
         echo podman
     elif command -v docker &>/dev/null; then

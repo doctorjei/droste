@@ -55,6 +55,12 @@ runs:
     # way regardless of tier type.
     - name: Run drostify checks against ${{ inputs.tier }}
       shell: bash
+      # GHA ubuntu-latest has both docker and podman; docker/build-push-
+      # action loads into docker's storage, so force drostify to use
+      # docker (podman wouldn't see the loaded image and would try to
+      # pull from a registry).
+      env:
+        CONTAINER_CMD: docker
       run: scripts/drostify test ${{ inputs.tier }}
 
     - name: Tag for GHCR
