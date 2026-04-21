@@ -15,15 +15,19 @@ RUN while IFS= read -r orig && IFS= read -r div && IFS= read -r owner; do \
         esac; \
     done < /var/lib/dpkg/diversions
 
-# Install coreutils + grep + sed + findutils + gzip in their own layer so
-# their GNU binaries replace the busybox symlinks before any restore-list
-# postinst runs. coreutils covers ln/cp/chmod/etc.; grep is needed because
+# Install coreutils + grep + sed + findutils + gzip + diffutils in their
+# own layer so their GNU binaries replace the busybox symlinks before any
+# restore-list postinst runs, and before any downstream tier installs a
+# package that conflicts with `busybox` (notably `busybox-static`, pulled
+# in by press). When busybox gets removed, its postrm invokes `diff` via
+# dpkg — and /usr/bin/diff is a busybox symlink until diffutils is
+# installed. coreutils covers ln/cp/chmod/etc.; grep is needed because
 # ucfr (from ucf, pulled in by openssh-server) uses `grep --count` which
 # busybox rejects. sed/findutils/gzip preempt similar failures common in
 # Debian postinst scripts.
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
-       coreutils grep sed findutils gzip \
+       coreutils grep sed findutils gzip diffutils \
     && rm -rf /var/lib/apt/lists/*
 
 COPY containers/droste-seed/canopy-restore.txt /tmp/canopy-restore.txt
