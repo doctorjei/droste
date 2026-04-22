@@ -473,10 +473,23 @@ case "$COMMAND" in
         done
         ;;
     test)
-        for tier in $(resolve_tiers "$IMAGE"); do
-            echo ""
-            do_test "$tier"
-        done
+        # Group targets expand to multiple tiers; a single-tier target
+        # tests ONLY that tier. (Ancestor checks still run — a tier's
+        # .checks file @quiet-inherits its parents' check files and
+        # evaluates them inside the tier's own container.) Testing
+        # ancestors separately as standalone containers fails in CI
+        # where only the current job's image is loaded.
+        case "$IMAGE" in
+            all|app-all|sys-all|vm-all)
+                for tier in $(resolve_tiers "$IMAGE"); do
+                    echo ""
+                    do_test "$tier"
+                done
+                ;;
+            *)
+                do_test "$IMAGE"
+                ;;
+        esac
         ;;
     help|-h|--help)
         usage
