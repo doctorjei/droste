@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=droste-tapestry
 
-FROM ghcr.io/doctorjei/tenkei/tenkei-kernel:1.4.1 AS tenkei-kernel
+FROM ghcr.io/doctorjei/tenkei/tenkei-kernel:1.4.2 AS tenkei-kernel
 
 FROM ${BASE_IMAGE}
 
