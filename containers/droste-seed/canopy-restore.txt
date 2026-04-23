@@ -3,8 +3,8 @@
 # Verified against canopy:1.4.0 dpkg --get-selections (187 pkgs installed).
 # 1.4.1 only adds systemd-resolved to canopy's PURGELIST per tenkei release
 # notes; not in this list, so 1.4.1-compatible without re-verification.
-# 1.4.2 is a drop-in from 1.4.1 for droste — tenkei release notes say 1.4.2
-# is a no-op for consumers that don't pass `init=`, so no changes needed here.
+# 1.5.0 is the current pinned version; compatibility has not been re-audited
+# against canopy's PURGELIST — update this comment after verifying build.
 # Note: coreutils is installed in a prior RUN layer in the Containerfile
 # (must beat other postinsts to /usr/bin/ln etc.), not listed here.
 #
