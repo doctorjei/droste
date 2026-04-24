@@ -32,7 +32,7 @@ libelf-dev installed	dpkg -s libelf-dev 2>/dev/null | grep -q '^Status: install 
 libssl-dev installed	dpkg -s libssl-dev 2>/dev/null | grep -q '^Status: install ok installed'
 libncurses-dev installed	dpkg -s libncurses-dev 2>/dev/null | grep -q '^Status: install ok installed'
 cpio available	command -v cpio
-busybox-static available	test -x /bin/busybox-static || command -v busybox-static
+busybox-static available	dpkg -s busybox-static 2>/dev/null | grep -q "^Status: install ok installed"
 
 # Shell linting
 shellcheck available	command -v shellcheck
