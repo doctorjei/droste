@@ -1,0 +1,69 @@
+name: Release — version-tag GHCR images
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Tag push: re-tag the already-built per-SHA images on GHCR with
+# semantic-version aliases. Assumes the main-branch build workflow has
+# already built and pushed ghcr.io/<owner>/droste-<tier>:<sha> for the
+# tagged commit. Uses `docker buildx imagetools create`, which writes
+# new manifest references without downloading or re-uploading image
+# layers. For tag v1.2.3, creates these additional tags on all 21
+# tiers: 1.2.3, 1.2, 1.
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  retag:
+    name: Re-tag 21 images for ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse semver from tag
+        id: v
+        shell: bash
+        run: |
+          tag="${{ github.ref_name }}"
+          full="${tag#v}"
+          major="${full%%.*}"
+          rest="${full#${major}.}"
+          minor="${rest%%.*}"
+          echo "full=${full}" >> "$GITHUB_OUTPUT"
+          echo "majorminor=${major}.${minor}" >> "$GITHUB_OUTPUT"
+          echo "major=${major}" >> "$GITHUB_OUTPUT"
+
+      - name: Re-tag all 21 droste images
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER="${{ github.repository_owner }}"
+          SHA="${{ github.sha }}"
+          TIERS=(
+            seed fiber sheet page tome press gutenberg
+            lint thread yarn fabric tapestry loom jacquard
+            root hair wool felt amimono stuffer stuffinator
+          )
+          VERSION_TAGS=(
+            "${{ steps.v.outputs.full }}"
+            "${{ steps.v.outputs.majorminor }}"
+            "${{ steps.v.outputs.major }}"
+          )
+
+          for tier in "${TIERS[@]}"; do
+            src="ghcr.io/${OWNER}/droste-${tier}:${SHA}"
+            echo "=== droste-${tier} ==="
+            for v in "${VERSION_TAGS[@]}"; do
+              dst="ghcr.io/${OWNER}/droste-${tier}:${v}"
+              docker buildx imagetools create --tag "${dst}" "${src}"
+            done
+          done
