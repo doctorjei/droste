@@ -15,9 +15,6 @@ RUN apt-get update \
        qemu-guest-agent watchdog \
     && rm -rf /var/lib/apt/lists/*
 
-# Unmask services that system tier masks for LXC (VMs need these)
-RUN systemctl unmask systemd-growfs-root.service systemd-remount-fs.service
-
 # VM boot fixes: set login password, enable DHCP + serial console
 RUN echo 'droste:droste' | chpasswd \
     && usermod -aG sudo droste \

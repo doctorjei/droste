@@ -11,7 +11,7 @@ USER root
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
       # Containers
-      podman fuse-overlayfs slirp4netns uidmap \
+      podman fuse-overlayfs passt uidmap \
       # Networking
       dnsmasq nftables iptables ipcalc \
       # Utilities

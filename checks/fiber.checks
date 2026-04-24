@@ -3,7 +3,7 @@
 # Containers
 podman available	podman --version
 fuse-overlayfs available	fuse-overlayfs --version
-slirp4netns available	slirp4netns --version
+pasta available	command -v pasta
 
 # Networking
 dnsmasq available	test -x /usr/sbin/dnsmasq

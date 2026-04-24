@@ -1,0 +1,4 @@
+# Regression guard: VM tiers must not ship with growfs/remount-fs masked
+# (VM consumers may opt in via x-systemd.growfs fstab flags).
+systemd-growfs-root unmasked	! test -L /etc/systemd/system/systemd-growfs-root.service
+systemd-remount-fs unmasked	! test -L /etc/systemd/system/systemd-remount-fs.service

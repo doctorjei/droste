@@ -93,7 +93,7 @@ See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
 
 **Python**: ```pipx, python3-pip, python3-venv, uv```
 
-**Virtualization**: ```fuse-overlayfs, podman, slirp4netns, uidmap```
+**Virtualization**: ```fuse-overlayfs, podman, passt, uidmap```
 
 **System Tools**: ```etckeeper```
 

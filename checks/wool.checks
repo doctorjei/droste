@@ -4,6 +4,7 @@
 @quiet thread.checks
 @quiet sheet.checks
 @quiet yarn.checks
+@quiet vm-unmasked.checks
 
 # VM boot files (kento VM mode)
 vmlinuz exists	test -f /boot/vmlinuz
@@ -11,8 +12,6 @@ initramfs.img exists	test -f /boot/initramfs.img
 
 # VM boot readiness
 fstab has no mount entries	! grep -qvE '^#|^$' /etc/fstab
-systemd-growfs-root unmasked	! test -L /etc/systemd/system/systemd-growfs-root.service
-systemd-remount-fs unmasked	! test -L /etc/systemd/system/systemd-remount-fs.service
 droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
 droste in sudo group	id -nG droste | grep -qw sudo
 droste in kvm group	id -nG droste | grep -qw kvm

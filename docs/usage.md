@@ -204,7 +204,8 @@ sudo lxc-attach -n my-test
 ```
 
 This gives a root shell inside the running container. SSH is also available
-if the image includes openssh-server (all tiers from thread onward).
+— openssh-server is installed at lint (cloth L0), so every cloth and wool
+tier ships sshd.
 
 ### Lifecycle
 

@@ -17,9 +17,6 @@ RUN apt-get -qq update \
 # Restrict cloud-init datasource probes (NoCloud + ConfigDrive + None)
 COPY oci/cloud-init-droste.cfg /etc/cloud/cloud.cfg.d/99-droste.cfg
 
-# Mask services that break LXC (growfs needs block device, remount-fs needs fstab)
-RUN systemctl mask systemd-growfs-root.service systemd-remount-fs.service
-
 # Enable getty on /dev/console for LXC console access
 RUN systemctl enable getty@console.service
 
