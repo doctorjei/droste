@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=droste-jacquard
 
-FROM ghcr.io/doctorjei/gemet/boot:1.5.0 AS gemet-boot
+FROM ghcr.io/doctorjei/gemet/boot:1.5.1 AS gemet-boot
 
 FROM ${BASE_IMAGE}
 
