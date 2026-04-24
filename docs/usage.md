@@ -38,7 +38,7 @@ pre-installed, enabling nested LXC/VM operations from within a booted tier.
 without nested-container needs.
 
 **VM tiers** (root, hair, wool, felt, amimono, stuffer, stuffinator) add a
-[tenkei](https://github.com/doctorjei/tenkei) kernel and initramfs, VM-specific
+[gemet](https://github.com/doctorjei/gemet) kernel and initramfs, VM-specific
 packages (qemu-guest-agent, watchdog, libvirt, nested virtualization tools, etc.),
 and boot config on top of each system tier. Kento boots them via QEMU + virtiofs
 — the OCI layers become the VM's root filesystem without extraction or disk images.
@@ -51,7 +51,7 @@ into a temporary rootfs via overlayfs, runs a single process, and tears it down.
 That's fine for process containers, but it's not a machine — there's no init
 system, no services, no persistent state.
 
-Kento and tenkei extend this to system containers and VMs without copying or
+Kento and gemet extend this to system containers and VMs without copying or
 converting the image data.
 
 ### OCI → LXC system container (kento)
@@ -101,7 +101,7 @@ also include `lxc` and `systemd-container` management tooling plus the
 `/usr/local/bin/kento`). This lets a booted cloth or wool tier spawn its
 own nested LXC containers or VMs.
 
-### OCI → VM (kento + tenkei)
+### OCI → VM (kento + gemet)
 
 VM tiers go further: they boot inside a real virtual machine with their own
 kernel. The OCI image becomes the VM's root filesystem — no disk images, no
@@ -109,9 +109,9 @@ qcow2, no conversion.
 
 1. **Kernel extraction.** Kento reads `/boot/vmlinuz` and `/boot/initramfs.img`
    from inside the OCI image. These are the
-   [tenkei](https://github.com/doctorjei/tenkei) kernel and initramfs, copied
-   into every VM tier's Containerfile from tenkei's `tenkei-kernel` OCI image
-   via a multi-stage `COPY --from=tenkei-kernel`.
+   [gemet](https://github.com/doctorjei/gemet) kernel and initramfs, copied
+   into every VM tier's Containerfile from gemet's `boot` OCI image
+   via a multi-stage `COPY --from=gemet-boot`.
 
 2. **virtiofsd.** Kento launches virtiofsd, which shares the OCI layers
    (mounted as overlayfs, same as LXC mode) to the guest VM via the virtio
@@ -119,11 +119,11 @@ qcow2, no conversion.
    as a FUSE share.
 
 3. **QEMU boot.** Kento starts QEMU with:
-   - `-kernel` and `-initrd` pointing to the extracted tenkei files
+   - `-kernel` and `-initrd` pointing to the extracted gemet files
    - A virtiofs device tagged `rootfs` connecting to the virtiofsd socket
    - User-mode networking with SSH port forwarding
 
-4. **Initramfs pivot.** The tenkei initramfs is a minimal script (~6 lines)
+4. **Initramfs pivot.** The gemet initramfs is a minimal script (~6 lines)
    that mounts the virtiofs share tagged `rootfs` and calls `switch_root`
    into it. From the VM's perspective, the OCI layers **are** the root
    filesystem — it boots into `/sbin/init` (systemd) exactly as if it were
@@ -141,7 +141,7 @@ qcow2, no conversion.
    (fstab is already empty in the canopy base — no fstab clearing needed.)
 
 **Why VM tiers exist separately:** System tiers could theoretically boot as
-VMs if you added kernel files. VM tiers formalize this by including the tenkei
+VMs if you added kernel files. VM tiers formalize this by including the gemet
 kernel, setting a password, configuring DHCP, and installing VM-specific
 packages that only make sense with a hypervisor — qemu-guest-agent (hypervisor
 integration), watchdog (hardware watchdog), qemu-system-x86/libvirt/swtpm/ovmf
@@ -235,7 +235,7 @@ commands. Use `--vmid` to set the Proxmox container ID.
 ## Running VMs
 
 VM mode requires [kento](https://pypi.org/project/kento/) and
-[tenkei](https://github.com/doctorjei/tenkei) kernel files baked into the
+[gemet](https://github.com/doctorjei/gemet) kernel files baked into the
 image (already included in all VM tiers).
 
 ### Create and start
@@ -244,7 +244,7 @@ image (already included in all VM tiers).
 sudo kento container create localhost/droste-root --vm --name vm1 --start
 ```
 
-Kento launches QEMU with the tenkei kernel, using virtiofs to mount the
+Kento launches QEMU with the gemet kernel, using virtiofs to mount the
 OCI layers as the VM's root filesystem. No disk images are created.
 
 ### SSH access

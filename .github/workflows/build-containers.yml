@@ -10,7 +10,7 @@ on:
       - '.github/workflows/build-containers.yml'
   workflow_dispatch:
 
-# droste-seed builds FROM ghcr.io/doctorjei/tenkei/canopy (pinned in its
+# droste-seed builds FROM ghcr.io/doctorjei/gemet/canopy (pinned in its
 # Containerfile). Every other tier pulls its parent by :${{ github.sha }},
 # so jobs use `needs:` to mirror the dependency tree. That way a rerun of
 # a failed leaf job skips the ancestors that already succeeded, and tiers

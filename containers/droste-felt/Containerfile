@@ -1,13 +1,13 @@
 ARG BASE_IMAGE=droste-fabric
 
-FROM ghcr.io/doctorjei/tenkei/tenkei-kernel:1.5.0 AS tenkei-kernel
+FROM ghcr.io/doctorjei/gemet/boot:1.5.0 AS gemet-boot
 
 FROM ${BASE_IMAGE}
 
 LABEL description="droste-felt: VM-bootable fabric (kento VM mode)"
 
-COPY --from=tenkei-kernel /boot/vmlinuz /boot/vmlinuz
-COPY --from=tenkei-kernel /boot/initramfs.img /boot/initramfs.img
+COPY --from=gemet-boot /boot/vmlinuz /boot/vmlinuz
+COPY --from=gemet-boot /boot/initramfs.img /boot/initramfs.img
 
 # VM-only packages (not useful in system/LXC containers)
 RUN apt-get update \

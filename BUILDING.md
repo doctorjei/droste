@@ -16,7 +16,7 @@ Requires Podman. All tiers, including seed, build from Containerfiles.
 
 ### Building seed
 
-Seed inherits from [tenkei](https://github.com/doctorjei/tenkei)'s
+Seed inherits from [gemet](https://github.com/doctorjei/gemet)'s
 `canopy` OCI image (pinned by semver in the Containerfile) and layers
 on the droste user, sysctl forwarding, locales, and a restore list for
 a handful of packages canopy strips that droste-seed still wants.
@@ -53,7 +53,7 @@ drostify test all                  # test all OCI tiers
 ### VM-bootable OCI images
 
 The VM tier line adds kernel files (`/boot/vmlinuz` and `/boot/initramfs.img`,
-copied from tenkei's `tenkei-kernel` OCI image via a multi-stage
+copied from gemet's `boot` OCI image via a multi-stage
 `COPY --from=`), VM-specific packages (qemu-guest-agent, watchdog, libvirt,
 nested virt tools, etc.), kernel module configs, password, and DHCP config
 on top of each system image, enabling boot via kento VM mode (QEMU + virtiofs).
@@ -159,6 +159,6 @@ oci/                 OCI build support files
   seed-oci-exclude.txt  Packages stripped from seed (reinstalled in system tiers)
 ```
 
-VM tiers pull `/boot/vmlinuz` and `/boot/initramfs.img` from tenkei's
-`tenkei-kernel` OCI image via multi-stage `COPY --from=` — no kernel
+VM tiers pull `/boot/vmlinuz` and `/boot/initramfs.img` from gemet's
+`boot` OCI image via multi-stage `COPY --from=` — no kernel
 files are checked into droste.

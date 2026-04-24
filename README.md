@@ -1,14 +1,14 @@
 # Droste
 
-Nested virtualization images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built on Debian 13 (Trixie) as layered OCI images in three variants: process containers, system containers ([kento](https://pypi.org/project/kento/)), and VM-bootable ([tenkei](https://github.com/doctorjei/tenkei) kernel).
+Nested virtualization images for testing infrastructure operations — containers, VMs, DRBD, Pacemaker, iSCSI, LXC, Proxmox VE, and more. Built on Debian 13 (Trixie) as layered OCI images in three variants: process containers, system containers ([kento](https://pypi.org/project/kento/)), and VM-bootable ([gemet](https://github.com/doctorjei/gemet) kernel).
 
 ## Image Formats
 
 | Variant | Base | Use case | Init | Kernel |
 |---------|------|----------|------|--------|
-| **App** (paper) | [canopy](https://github.com/doctorjei/tenkei) → seed | Process containers, CI/CD | None | Host kernel |
+| **App** (paper) | [canopy](https://github.com/doctorjei/gemet) → seed | Process containers, CI/CD | None | Host kernel |
 | **System** (cloth) | App + init/systemd | System containers via [kento](https://pypi.org/project/kento/) | systemd | Host kernel |
-| **VM** (wool) | System + [tenkei](https://github.com/doctorjei/tenkei) kernel | VMs via [kento](https://pypi.org/project/kento/) VM mode | systemd | Own kernel |
+| **VM** (wool) | System + [gemet](https://github.com/doctorjei/gemet) kernel | VMs via [kento](https://pypi.org/project/kento/) VM mode | systemd | Own kernel |
 
 ## Tiers
 
@@ -18,7 +18,7 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 
 | Tier | Based on | Focus | Size |
 |------|----------|-------|------|
-| **seed** | canopy (tenkei) | Minimal OCI base | 413 MB |
+| **seed** | canopy (gemet) | Minimal OCI base | 413 MB |
 | **fiber** | seed | Basic tools, containers, networking | 1.02 GB |
 | **sheet** | fiber | Storage, VM tooling | 1.63 GB |
 | **page** | sheet | HA clustering, Ceph | 2.1 GB |
