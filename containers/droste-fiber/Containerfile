@@ -15,11 +15,12 @@ RUN apt-get -qq update \
       # Networking
       dnsmasq nftables iptables ipcalc \
       # Utilities
-      jq rsync tmux smbclient git gh make \
-      dnsutils tree unzip zip pipx htop patch bc \
+      jq yq rsync tmux smbclient git gh make \
+      dnsutils tree unzip zip bzip2 pipx htop patch bc \
       inetutils-telnet debootstrap sshpass xmlstarlet \
       lsof strace sysstat iotop iftop expect moreutils \
       rename entr jo whois sqlite3 atop etckeeper tftpd-hpa \
+      ripgrep fd-find \
       # Remote FS (smbnetfs replaces cifs-utils; nfs-common excluded)
       smbnetfs sshfs \
       # Filesystem
@@ -42,8 +43,8 @@ RUN apt-get -qq update \
       pv \
       # Hex tools
       xxd \
-      # Python packaging
-      python3-pip python3-venv \
+      # Python packaging + libs
+      python3-pip python3-venv python3-tomli-w python3-passlib \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python micro-tools ──────────────────────────────────────────
@@ -52,6 +53,9 @@ COPY ansible/files/pyhttpd  /usr/local/bin/pyhttpd
 RUN chmod 755 /usr/local/bin/pystrings /usr/local/bin/pyhttpd \
     && update-alternatives --install /usr/bin/strings strings /usr/local/bin/pystrings 10 \
     && update-alternatives --install /usr/bin/httpd httpd /usr/local/bin/pyhttpd 10
+
+# ── fd convenience symlink (Debian ships fd-find as fdfind) ─────
+RUN ln -sf /usr/bin/fdfind /usr/local/bin/fd
 
 # ── Rootless Podman ──────────────────────────────────────────────
 RUN grep -q '^droste:' /etc/subuid  || printf 'droste:100000:65536\n' >> /etc/subuid \

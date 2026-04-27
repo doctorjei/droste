@@ -15,6 +15,15 @@ RUN apt-get -qq update \
       libelf-dev libssl-dev libncurses-dev \
       cpio busybox-static \
       shellcheck \
+      python3-build \
+      poppler-utils git-lfs \
+      bat git-delta \
     && rm -rf /var/lib/apt/lists/*
 
+# ── bat convenience symlink (Debian ships bat as batcat) ──
+RUN ln -sf /usr/bin/batcat /usr/local/bin/bat
+
 USER droste
+
+# ── Python dev toolchain (pipx) ──
+RUN for pkg in black isort ruff mypy pre-commit twine bump-my-version; do pipx install "$pkg"; done

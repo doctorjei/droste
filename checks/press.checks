@@ -36,3 +36,20 @@ busybox-static available	dpkg -s busybox-static 2>/dev/null | grep -q "^Status: 
 
 # Shell linting
 shellcheck available	command -v shellcheck
+
+# Python dev toolchain
+black available	black --version
+isort available	isort --version
+ruff available	ruff --version
+mypy available	mypy --version
+pre-commit available	pre-commit --version
+twine available	twine --version
+bump-my-version available	bump-my-version --version
+python3-build available	pyproject-build --version
+
+# Additional utilities
+pdftotext available	command -v pdftotext
+git-lfs available	git-lfs --version
+bat available	batcat --version
+bat symlink	test -L /usr/local/bin/bat
+git-delta available	delta --version
