@@ -1,0 +1,120 @@
+name: Gemet release — auto-bump pins
+
+on:
+  repository_dispatch:
+    types: [gemet-release]
+
+# Triggered by gemet's release workflow via repository_dispatch. The
+# client_payload carries the gemet ref name (e.g. "v1.7.0"); strip the
+# leading `v` to get the pin string used in droste's FROM lines. This
+# job reads the current canopy pin out of droste-seed/Containerfile to
+# learn the old version, then seds across all 9 pin sites:
+#   - containers/droste-seed/Containerfile        (canopy FROM)
+#   - containers/droste-{root,hair,wool,felt,amimono,stuffer,stuffinator}/Containerfile
+#                                                  (boot FROM, 7 files)
+#   - containers/droste-seed/canopy-restore.txt   (version-comment line)
+# If the sed produces no diff (droste already on this version), the
+# job exits cleanly without opening a PR. Otherwise a PR is opened
+# against main using peter-evans/create-pull-request; the PR triggers
+# the existing 21-tier matrix via build-containers.yml.
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    name: Bump gemet pins to ${{ github.event.client_payload.tag }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Compute old + new versions
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.client_payload.tag }}"
+          new="${tag#v}"
+          if [[ -z "${new}" ]]; then
+            echo "client_payload.tag was empty" >&2
+            exit 1
+          fi
+          old="$(sed -nE 's|^FROM ghcr.io/doctorjei/gemet/canopy:([0-9.]+).*|\1|p' \
+                   containers/droste-seed/Containerfile | head -n1)"
+          if [[ -z "${old}" ]]; then
+            echo "could not parse old canopy pin from droste-seed/Containerfile" >&2
+            exit 1
+          fi
+          echo "old=${old}" >> "$GITHUB_OUTPUT"
+          echo "new=${new}" >> "$GITHUB_OUTPUT"
+          echo "Old pin: ${old}"
+          echo "New pin: ${new}"
+
+      - name: Apply sed to all 9 pin sites
+        id: sed
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD="${{ steps.ver.outputs.old }}"
+          NEW="${{ steps.ver.outputs.new }}"
+
+          if [[ "${OLD}" == "${NEW}" ]]; then
+            echo "Droste is already pinned to ${NEW}; nothing to do."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES=(
+            containers/droste-seed/Containerfile
+            containers/droste-seed/canopy-restore.txt
+            containers/droste-root/Containerfile
+            containers/droste-hair/Containerfile
+            containers/droste-wool/Containerfile
+            containers/droste-felt/Containerfile
+            containers/droste-amimono/Containerfile
+            containers/droste-stuffer/Containerfile
+            containers/droste-stuffinator/Containerfile
+          )
+
+          # Escape dots in OLD so sed treats them literally.
+          OLD_RE="${OLD//./\\.}"
+
+          for f in "${FILES[@]}"; do
+            sed -i \
+              -e "s|gemet/canopy:${OLD_RE}|gemet/canopy:${NEW}|g" \
+              -e "s|gemet/boot:${OLD_RE}|gemet/boot:${NEW}|g" \
+              -e "s|^# ${OLD_RE} is the current pinned version|# ${NEW} is the current pinned version|g" \
+              "${f}"
+          done
+
+          if git diff --quiet; then
+            echo "sed produced no changes; droste is effectively already on ${NEW}."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat
+          fi
+
+      - name: Open pull request
+        if: steps.sed.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: gemet-bump-${{ steps.ver.outputs.new }}
+          base: main
+          commit-message: Bump gemet pins to ${{ steps.ver.outputs.new }}
+          title: Bump gemet pins to ${{ steps.ver.outputs.new }}
+          body: |
+            Drop-in from ${{ steps.ver.outputs.old }}. Covers seed's canopy FROM
+            and the 7 wool tiers' multi-stage boot FROM, plus the version note
+            in canopy-restore.txt.
+
+            Opened automatically in response to gemet release
+            `${{ github.event.client_payload.tag }}` via repository_dispatch.
+            Merging this PR triggers the 21-tier matrix in build-containers.yml;
+            green CI is the compatibility audit.
+          delete-branch: true
