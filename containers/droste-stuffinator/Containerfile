@@ -9,11 +9,17 @@ LABEL description="droste-stuffinator: VM-bootable jacquard (kento VM mode)"
 COPY --from=gemet-boot /boot/vmlinuz /boot/vmlinuz
 COPY --from=gemet-boot /boot/initramfs.img /boot/initramfs.img
 
-# VM-only packages (not useful in system/LXC containers)
+# VM-only packages (not useful in system/LXC containers).
+# NOTE: watchdog, libvirt-daemon-system, and virtinst are intentionally
+# absent here (unlike the other wool tiers) — PVE displaces them on this
+# tier: pve-ha-manager Conflicts watchdog (it ships its own watchdog-mux),
+# and pve-qemu-kvm doesn't satisfy libvirt's qemu-system dependency, so
+# apt would remove the libvirt stack during the PVE install anyway. PVE
+# manages VMs directly (qm), so libvirt/virtinst are redundant here.
 RUN apt-get update \
     && apt-get install -y -qq --no-install-recommends \
-       qemu-guest-agent watchdog \
-       virtiofsd libvirt-daemon-system virtinst nbdkit \
+       qemu-guest-agent \
+       virtiofsd nbdkit \
        nfs-kernel-server cpu-checker irqbalance linux-cpupower \
        fence-agents numactl \
     && rm -rf /var/lib/apt/lists/*

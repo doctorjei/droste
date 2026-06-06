@@ -29,13 +29,10 @@ serial-getty@ttyS0 enabled	test -L /etc/systemd/system/getty.target.wants/serial
 
 # VM-only packages
 qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install'
-watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install'
 qemu-system-x86_64 binary present	command -v qemu-system-x86_64 >/dev/null
 virtiofsd installed	dpkg -s virtiofsd 2>/dev/null | grep -q '^Status: install'
 swtpm installed	dpkg -s swtpm 2>/dev/null | grep -q '^Status: install'
 pve-edk2-firmware-ovmf installed	dpkg -s pve-edk2-firmware-ovmf 2>/dev/null | grep -q '^Status: install'
-libvirt-daemon-system installed	dpkg -s libvirt-daemon-system 2>/dev/null | grep -q '^Status: install'
-virtinst installed	dpkg -s virtinst 2>/dev/null | grep -q '^Status: install'
 nbdkit installed	dpkg -s nbdkit 2>/dev/null | grep -q '^Status: install'
 nfs-kernel-server installed	dpkg -s nfs-kernel-server 2>/dev/null | grep -q '^Status: install'
 cpu-checker installed	dpkg -s cpu-checker 2>/dev/null | grep -q '^Status: install'
