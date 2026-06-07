@@ -22,7 +22,7 @@ apparmor installed	dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok i
 /sbin/init exists	test -x /sbin/init
 
 # fstab still clean (recheck after system package reinstall)
-fstab has no mount entries	! grep -qvE '^#|^$' /etc/fstab
+fstab has no mount entries	test -f /etc/fstab && ! grep -qvE '^#|^$' /etc/fstab
 
 # LXC console access
 getty@console enabled	test -L /etc/systemd/system/getty.target.wants/getty@console.service

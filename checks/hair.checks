@@ -9,7 +9,7 @@ vmlinuz exists	test -f /boot/vmlinuz
 initramfs.img exists	test -f /boot/initramfs.img
 
 # VM boot readiness
-fstab has no mount entries	! grep -qvE '^#|^$' /etc/fstab
+fstab has no mount entries	test -f /etc/fstab && ! grep -qvE '^#|^$' /etc/fstab
 droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
 droste in sudo group	id -nG droste | grep -qw sudo
 systemd-networkd DHCP config	grep -q '^Type=ether$' /etc/systemd/network/80-dhcp.network
@@ -17,5 +17,5 @@ systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/sys
 serial-getty@ttyS0 enabled	test -L /etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 
 # VM-only packages
-qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install'
-watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install'
+qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install ok installed'
+watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install ok installed'
