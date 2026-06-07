@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=droste-press
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-gutenberg: placeholder for future Proxmox VE packages"
+LABEL description="droste-gutenberg: app cap (user-extensible; empty by design)"
 
 USER droste

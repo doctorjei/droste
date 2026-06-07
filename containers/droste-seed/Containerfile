@@ -11,7 +11,7 @@ LABEL description="droste-seed: app base, FROM canopy + droste user"
 # and other non-busybox diversions alone.
 RUN while IFS= read -r orig && IFS= read -r div && IFS= read -r owner; do \
         case "$div" in \
-            *.distrib) dpkg-divert --quiet --no-rename --remove "$orig" || true ;; \
+            *.distrib) dpkg-divert --quiet --no-rename --remove "$orig" ;; \
         esac; \
     done < /var/lib/dpkg/diversions
 

@@ -36,7 +36,7 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 | **fabric** | page | + drbd, iscsi, multipath | 2.25 GB |
 | **tapestry** | tome | + sg3-utils, smartmontools, qemu-arm | 3.44 GB |
 | **loom** | press | Same kernel packages as tapestry | 4.17 GB |
-| **jacquard** | gutenberg | Same kernel packages as tapestry | 4.17 GB |
+| **jacquard** | gutenberg | + PVE node stack minus qemu (pct/pvesm/pmxcfs + HA) | 4.17 GB |
 
 ### VM Tiers — wool (VM-bootable via kento VM mode)
 
@@ -48,11 +48,13 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 | **felt** | fabric | VM-bootable fabric |
 | **amimono** | tapestry | VM-bootable tapestry |
 | **stuffer** | loom | VM-bootable loom |
-| **stuffinator** | jacquard | VM-bootable jacquard |
+| **stuffinator** | jacquard | VM-bootable jacquard + PVE qemu half (qm) |
 
 Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Cloth tiers from **thread** onward also include LXC + systemd-container management tools and have `kento` pre-installed (via pipx), making them capable of nested LXC/VM operations from within a booted tier. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling. Wool L2+ tiers (wool, felt, amimono, stuffer, stuffinator) also add `qemu-system-x86` + `virtiofsd` and place the `droste` user in the `kvm` group, so they can host nested VMs (e.g., `kento create --vm` from inside a booted droste VM).
 
-**stuffinator** additionally restores a minimal Proxmox VE — `qemu-server pve-container pve-cluster`, giving `pct`, `qm`, and pmxcfs (`/etc/pve`) — so it can serve as kento's `pve-lxc`/`pve-vm` E2E host. No `proxmox-ve` metapackage, no `pve-manager` web stack, no ZFS, and no proxmox kernel: it keeps the gemet kernel it COPYs. The PVE package install is kernel-independent, but `pve-vm`/`qm` runtime requires gemet's KVM-host kernel.
+**jacquard** restores the Proxmox VE *node* stack minus qemu: `pve-container` pulls `pct` (containers), `pvesm` (storage), pmxcfs (`/etc/pve`), `pve-firewall`, `pve-ha-manager`, `lxc-pve`, and `proxmox-backup-client` on top of jacquard's existing HA toolset. An apt origin pin (`o=Proxmox`, priority 1001) makes PVE variants win for overlapping packages. No `proxmox-ve` metapackage, no `pve-manager` web stack, no ZFS, and no proxmox kernel.
+
+**stuffinator** inherits jacquard's PVE node stack and adds the qemu/qm half: `qemu-server` gives `qm` and pulls `pve-qemu-kvm`, so it can serve as kento's `pve-lxc`/`pve-vm` E2E host. The PVE package install is kernel-independent, but `pve-vm`/`qm` runtime requires gemet's KVM-host kernel.
 
 All system and VM tiers ship with `cloud-init` for declarative first-boot configuration, with a default datasource list of `[NoCloud, ConfigDrive, None]` (override via `/etc/cloud/cloud.cfg.d/`). See [docs/usage.md](docs/usage.md#first-boot-configuration-cloud-init).
 

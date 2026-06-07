@@ -20,8 +20,8 @@ RUN apt-get -qq update \
     && rm -rf /var/lib/apt/lists/*
 
 # tshark installed individually (large package, ~124 MB)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends tshark \
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends tshark \
     && rm -rf /var/lib/apt/lists/*
 
 USER droste

@@ -1,7 +1,7 @@
 ARG BASE_IMAGE=droste-gutenberg
 FROM ${BASE_IMAGE}
 
-LABEL description="droste-jacquard: bootable gutenberg (kento system container)"
+LABEL description="droste-jacquard: bootable gutenberg + PVE node stack minus qemu (pct/pvesm/pmxcfs + HA)"
 
 USER root
 
@@ -15,6 +15,42 @@ RUN apt-get -qq update \
        drbd-utils sbd dlm-controld open-iscsi targetcli-fb multipath-tools \
        sg3-utils smartmontools apparmor-utils qemu-system-arm \
     && rm -f /tmp/seed-oci-exclude.txt \
+    && rm -rf /var/lib/apt/lists/*
+
+# Proxmox VE node stack minus qemu: pct (containers) + pvesm (storage) +
+# pmxcfs (/etc/pve) + HA (pve-ha-manager) + firewall + PBS client, on top of
+# jacquard's existing HA toolset (sbd/dlm/drbd/iscsi/targetcli/multipath +
+# transitive corosync). pve-container's hard-dep closure pulls pve-cluster
+# (pmxcfs), pve-firewall, pve-ha-manager, lxc-pve, proxmox-backup-client,
+# libpve-storage-perl (pvesm), pve-lxc-syscalld. lxc-pve Replaces the Debian
+# `lxc` installed above (Conflicts+Provides → apt swaps cleanly). An apt
+# origin pin (o=Proxmox, Pin-Priority 1001) makes PVE variants win for
+# overlapping packages (lxcfs/lvm2/corosync flip to their +pve/+pmx builds).
+# NO proxmox-ve metapackage (hard-depends a proxmox kernel), NO pve-manager
+# web stack, NO qemu (that rides in stuffinator via qemu-server), NO ZFS,
+# NO proxmox kernel. The package install is kernel-independent; pct runtime
+# needs gemet's kernel. wget (from seed) fetches the signing key; the fetch
+# is guarded so an empty/failed download fails the build loudly.
+RUN wget --tries=3 -O- https://enterprise.proxmox.com/debian/proxmox-release-trixie.gpg \
+       > /tmp/proxmox-release-trixie.gpg \
+    && test -s /tmp/proxmox-release-trixie.gpg \
+    && mv /tmp/proxmox-release-trixie.gpg /usr/share/keyrings/proxmox-release-trixie.gpg \
+    && printf 'deb [signed-by=/usr/share/keyrings/proxmox-release-trixie.gpg] http://download.proxmox.com/debian/pve trixie pve-no-subscription\n' \
+       > /etc/apt/sources.list.d/pve-no-subscription.list \
+    && printf 'Package: *\nPin: release o=Proxmox\nPin-Priority: 1001\n' \
+       > /etc/apt/preferences.d/proxmox
+
+# policy-rc.d (exit 101) suppresses service starts so the pve-cluster/pmxcfs
+# postinst doesn't fail without a real cluster; postfix preseed is defensive
+# (unlikely pulled w/o pve-manager, no-op otherwise). Removed after install.
+RUN echo 'postfix postfix/main_mailer_type select No configuration' | debconf-set-selections \
+    && printf 'exit 101\n' > /usr/sbin/policy-rc.d \
+    && chmod 0755 /usr/sbin/policy-rc.d \
+    && apt-get -qq update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+       pve-container \
+    && rm -f /usr/sbin/policy-rc.d \
+    && rm -f /etc/apt/sources.list.d/pve-enterprise.list \
     && rm -rf /var/lib/apt/lists/*
 
 # Restrict cloud-init datasource probes (NoCloud + ConfigDrive + None)

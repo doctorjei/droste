@@ -10,7 +10,7 @@ COPY --from=gemet-boot /boot/vmlinuz /boot/vmlinuz
 COPY --from=gemet-boot /boot/initramfs.img /boot/initramfs.img
 
 # VM-only packages (not useful in system/LXC containers)
-RUN apt-get update \
+RUN apt-get -qq update \
     && apt-get install -y -qq --no-install-recommends \
        qemu-guest-agent watchdog \
     && rm -rf /var/lib/apt/lists/*
