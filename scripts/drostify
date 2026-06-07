@@ -152,8 +152,8 @@ do_test() {
     container_cmd=$(detect_container_cmd)
 
     if [[ ! -f "$checkfile" ]]; then
-        echo "Warning: no check file found: $checkfile" >&2
-        return 0
+        echo "Error: no check file found: $checkfile" >&2
+        return 1
     fi
 
     echo "droste-${tier} test"
@@ -176,7 +176,12 @@ do_test() {
         [[ "$line" =~ ^@quiet\  ]] || continue
         local qfile="${line#@quiet }"
         qfile="$PROJECT_DIR/checks/$qfile"
-        [[ -f "$qfile" ]] || { echo "Warning: quiet file not found: $qfile" >&2; continue; }
+        if [[ ! -f "$qfile" ]]; then
+            echo "  - FAIL: @quiet target not found: ${qfile##*/}"
+            errors+=("@quiet target not found: ${qfile##*/}")
+            fail=$((fail + 1))
+            continue
+        fi
         # @stop marks checks private to this file — run for its own `test`,
         # but NOT inherited by children via @quiet.
         while IFS= read -r qline; do
@@ -234,6 +239,12 @@ do_test() {
     echo ""
     echo "================================"
     echo "Results: ${pass} passed, ${fail} failed"
+
+    if [[ $((pass + fail)) -eq 0 ]]; then
+        echo ""
+        echo "Error: no checks executed for ${tier} — empty check file or all @quiet targets missing" >&2
+        return 1
+    fi
 
     if [[ ${fail} -gt 0 ]]; then
         echo ""
