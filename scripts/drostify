@@ -161,10 +161,15 @@ do_test() {
     echo ""
 
     local cname="droste-test-${tier}"
+    if ! $container_cmd image inspect "$image" >/dev/null 2>&1; then
+        echo "Error: image $image not found — build it first: drostify build $tier" >&2
+        return 1
+    fi
     $container_cmd rm -f "$cname" &>/dev/null || true
     $container_cmd run -d --name "$cname" "$image" sleep infinity >/dev/null
 
     local pass=0 fail=0 errors=()
+    local out
 
     # Run @quiet inherited check files (failures only)
     while IFS= read -r line; do
@@ -172,15 +177,25 @@ do_test() {
         local qfile="${line#@quiet }"
         qfile="$PROJECT_DIR/checks/$qfile"
         [[ -f "$qfile" ]] || { echo "Warning: quiet file not found: $qfile" >&2; continue; }
+        # @stop marks checks private to this file — run for its own `test`,
+        # but NOT inherited by children via @quiet.
         while IFS= read -r qline; do
             [[ -z "$qline" ]] && continue
             [[ "$qline" =~ ^# ]] && continue
             [[ "$qline" =~ ^@ ]] && continue
             IFS=$'\t' read -r desc cmd flag <<< "$qline"
-            if $container_cmd exec "$cname" bash -c "$cmd" &>/dev/null; then
+            if [[ -z "$cmd" ]]; then
+                echo "  - FAIL (${qfile##*/}): malformed check line (no tab / empty command): $desc"
+                errors+=("(${qfile##*/}) malformed: $desc")
+                fail=$((fail + 1))
+                continue
+            fi
+            if out=$($container_cmd exec "$cname" bash -c "$cmd" 2>&1); then
                 pass=$((pass + 1))
             else
                 echo "  - FAIL (${qfile##*/}): $desc"
+                echo "      cmd: $cmd"
+                [[ -n "$out" ]] && printf '      out: %s\n' "$out" | sed -n '1,3p'
                 errors+=("(${qfile##*/}) $desc")
                 fail=$((fail + 1))
             fi
@@ -196,17 +211,25 @@ do_test() {
             continue
         fi
         IFS=$'\t' read -r desc cmd flag <<< "$line"
-        if $container_cmd exec "$cname" bash -c "$cmd" &>/dev/null; then
+        if [[ -z "$cmd" ]]; then
+            echo "  - FAIL: malformed check line (no tab / empty command): $desc"
+            errors+=("malformed: $desc")
+            fail=$((fail + 1))
+            continue
+        fi
+        if out=$($container_cmd exec "$cname" bash -c "$cmd" 2>&1); then
             echo "  + $desc"
             pass=$((pass + 1))
         else
             echo "  - FAIL: $desc"
+            echo "      cmd: $cmd"
+            [[ -n "$out" ]] && printf '      out: %s\n' "$out" | sed -n '1,3p'
             errors+=("$desc")
             fail=$((fail + 1))
         fi
     done < "$checkfile"
 
-    $container_cmd rm -f "$cname" >/dev/null
+    $container_cmd rm -f "$cname" >/dev/null || true
 
     echo ""
     echo "================================"
@@ -278,7 +301,7 @@ do_build() {
     echo ""
     echo "Build complete."
     $container_cmd image inspect "droste-${tier}" --format '{{.Size}}' | \
-        awk '{printf "Image size: %.0f MB\n", $1/1024/1024}'
+        awk '{printf "Image size: %.0f MB\n", $1/1024/1024}' || true
     echo ""
     do_test "$tier"
 }
@@ -410,19 +433,32 @@ if [[ $# -gt 0 ]]; then
     if is_tier "$1" || [[ "$1" == "all" ]]; then
         IMAGE="$1"
         shift
+    elif [[ "$1" != -* ]]; then
+        # A non-flag argument in the tier slot that isn't a known tier is a
+        # tier typo, not an option problem. Report it as such.
+        echo "Error: unknown tier or target: $1" >&2
+        echo "Run '$(basename "$0") --help' for valid tiers and options." >&2
+        exit 1
     fi
 fi
 
 # ── Parse global options ─────────────────────────────────────────────
+force_seen=false
+force_tier_seen=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --force)          FORCE=true; shift ;;
-        --force-tier)     FORCE_TIER=true; shift ;;
+        --force)          FORCE=true; force_seen=true; shift ;;
+        --force-tier)     FORCE_TIER=true; force_tier_seen=true; shift ;;
         --deps)           DEPS=true; shift ;;
         --verbose|--debug) VERBOSE=true; shift ;;
         *)                echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
     esac
 done
+
+if [[ "$force_seen" == true && "$force_tier_seen" == true ]]; then
+    echo "Error: --force and --force-tier are mutually exclusive" >&2
+    exit 1
+fi
 
 # ── Compute build list and populate FORCE_TIERS ─────────────────────
 # --force-tier implies force
