@@ -10,7 +10,9 @@ initramfs.img exists	test -f /boot/initramfs.img
 fstab has no mount entries	test -f /etc/fstab && ! grep -qvE '^#|^$' /etc/fstab
 droste password not locked	grep '^droste:' /etc/shadow | grep -qv '!'
 droste in sudo group	id -nG droste | grep -qw sudo
-systemd-networkd DHCP config	grep -q '^Type=ether$' /etc/systemd/network/80-dhcp.network
+systemd-networkd DHCP config	grep -q '^Name=en\* eth\*$' /etc/systemd/network/80-dhcp.network
+networkd veth-unmanaged match	grep -q '^Kind=veth$' /etc/systemd/network/10-lxc-veth-unmanaged.network
+networkd veth-unmanaged link	grep -q '^Unmanaged=yes$' /etc/systemd/network/10-lxc-veth-unmanaged.network
 systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
 serial-getty@ttyS0 enabled	test -L /etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 

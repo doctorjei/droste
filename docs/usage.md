@@ -135,8 +135,10 @@ qcow2, no conversion.
      (locked account). VMs need console/SSH login, so VM tiers set
      `droste:droste` via chpasswd.
    - **DHCP**: no network config exists by default. VM tiers create a
-     systemd-networkd config for DHCP on any ethernet interface
-     (`[Match] Type=ether`) and enable the service.
+     systemd-networkd config for DHCP on physical ethernet interfaces
+     (`[Match] Name=en* eth*`) and enable the service. A separate
+     higher-priority drop-in marks `Kind=veth` interfaces `Unmanaged=yes`,
+     so networkd leaves LXC veth pairs on their bridge.
 
    (fstab is already empty in the canopy base — no fstab clearing needed.)
 
@@ -321,9 +323,9 @@ VM tiers have password `droste` set for console and SSH login.
 sudo lxc-attach -n my-test -- ip addr show
 ```
 
-**VMs** use DHCP via systemd-networkd on any ethernet interface
-(`[Match] Type=ether`). Kento sets up user-mode networking with port
-forwarding for SSH.
+**VMs** use DHCP via systemd-networkd on physical ethernet interfaces
+(`[Match] Name=en* eth*`; veth interfaces are left unmanaged). Kento sets
+up user-mode networking with port forwarding for SSH.
 
 **Proxmox** hosts use `vmbr0` by default (auto-detected by kento).
 
