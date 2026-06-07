@@ -28,21 +28,28 @@ RUN apt-get -qq update \
 RUN printf 'options kvm_intel nested=1\noptions kvm_amd nested=1\n' \
        > /etc/modprobe.d/kvm-nested.conf
 
-# Proxmox VE qemu half: qemu-server gives qm and pulls pve-qemu-kvm +
-# swtpm+pve + pve-edk2-firmware-ovmf. The PVE node stack (pct/pvesm/pmxcfs +
-# HA) plus the proxmox repo, signing key, and origin pin are all inherited
-# from jacquard — stuffinator only adds the qemu/qm half here. NO proxmox-ve
-# metapackage, NO pve-manager web stack, NO ZFS, NO proxmox kernel: stuffinator
-# keeps the gemet kernel it COPYs. Note: qm runtime needs gemet's KVM-host
-# kernel; the package install itself is kernel-independent. Its own policy-rc.d
-# (exit 101) guard is required because jacquard removed policy-rc.d at the end
-# of its own RUN and that file does not carry across layers.
-RUN printf 'exit 101\n' > /usr/sbin/policy-rc.d \
+# Proxmox VE: pct/qm + pmxcfs (/etc/pve) on top of the full VM toolset. NO
+# proxmox-ve metapackage (it hard-depends a proxmox kernel), NO pve-manager
+# web stack, NO ZFS, NO proxmox kernel — stuffinator keeps the gemet kernel
+# it COPYs. An apt origin pin (o=Proxmox, Pin-Priority 1001) makes PVE
+# variants authoritatively win for overlapping packages (swtpm/lxcfs/lvm2/
+# corosync resolve to their +pve builds). Note: pve-vm/qm runtime needs
+# gemet's KVM-host kernel; the package install itself is kernel-independent.
+# policy-rc.d suppresses service starts so the pve-cluster/pmxcfs postinst
+# doesn't fail without a real cluster.
+RUN wget -qO /usr/share/keyrings/proxmox-release-trixie.gpg https://enterprise.proxmox.com/debian/proxmox-release-trixie.gpg \
+    && printf 'deb [signed-by=/usr/share/keyrings/proxmox-release-trixie.gpg] http://download.proxmox.com/debian/pve trixie pve-no-subscription\n' \
+       > /etc/apt/sources.list.d/pve-no-subscription.list \
+    && printf 'Package: *\nPin: release o=Proxmox\nPin-Priority: 1001\n' \
+       > /etc/apt/preferences.d/proxmox \
+    && echo 'postfix postfix/main_mailer_type select No configuration' | debconf-set-selections \
+    && printf 'exit 101\n' > /usr/sbin/policy-rc.d \
     && chmod 0755 /usr/sbin/policy-rc.d \
     && apt-get -qq update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-       qemu-server \
+       qemu-server pve-container pve-cluster \
     && rm -f /usr/sbin/policy-rc.d \
+    && rm -f /etc/apt/sources.list.d/pve-enterprise.list \
     && rm -rf /var/lib/apt/lists/*
 
 # VM boot fixes: set login password, enable DHCP + serial console

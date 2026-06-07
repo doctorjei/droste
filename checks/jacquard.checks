@@ -10,18 +10,4 @@
 @quiet tapestry.checks
 @quiet press.checks
 
-# Proxmox VE node (pct + storage + HA, no qemu)
-pct available	test -x /usr/sbin/pct
-pvesm available	test -x /usr/sbin/pvesm
-pmxcfs present	test -x /usr/bin/pmxcfs
-pve-container installed	dpkg -s pve-container 2>/dev/null | grep -q '^Status: install ok installed$'
-pve-cluster installed	dpkg -s pve-cluster 2>/dev/null | grep -q '^Status: install ok installed$'
-pve-firewall installed	dpkg -s pve-firewall 2>/dev/null | grep -q '^Status: install ok installed$'
-pve-ha-manager installed	dpkg -s pve-ha-manager 2>/dev/null | grep -q '^Status: install ok installed$'
-lxc-pve installed	dpkg -s lxc-pve 2>/dev/null | grep -q '^Status: install ok installed$'
-proxmox-backup-client installed	dpkg -s proxmox-backup-client 2>/dev/null | grep -q '^Status: install ok installed$'
-corosync is +pve	dpkg -s corosync 2>/dev/null | grep -qE '^Version: .*pve'
-proxmox origin pinned	grep -q 'o=Proxmox' /etc/apt/preferences.d/proxmox
-pve no-subscription repo present	test -f /etc/apt/sources.list.d/pve-no-subscription.list
-pve enterprise repo absent	! test -f /etc/apt/sources.list.d/pve-enterprise.list
-no proxmox kernel pulled	! dpkg -l 2>/dev/null | grep -qE '^ii\s+proxmox-(default-)?kernel'
+# Empty cap layer — no additional packages

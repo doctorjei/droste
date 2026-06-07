@@ -46,7 +46,16 @@ numactl installed	dpkg -s numactl 2>/dev/null | grep -q '^Status: install ok ins
 # VM kernel module config
 kvm nested virt config	test -f /etc/modprobe.d/kvm-nested.conf
 
-# Proxmox VE qemu half (qm; pct/pvesm/pmxcfs + repo/pin inherited from jacquard)
-qm available	test -x /usr/sbin/qm
-qemu-server installed	dpkg -s qemu-server 2>/dev/null | grep -q '^Status: install ok installed$'
-pve-qemu-kvm installed	dpkg -s pve-qemu-kvm 2>/dev/null | grep -q '^Status: install ok installed$'
+# Proxmox VE (pct/qm + pmxcfs, PVE-variant pinned)
+pct available	command -v pct >/dev/null
+qm available	command -v qm >/dev/null
+qemu-server installed	dpkg -s qemu-server 2>/dev/null | grep -q '^Status: install ok installed'
+pve-container installed	dpkg -s pve-container 2>/dev/null | grep -q '^Status: install ok installed'
+pve-cluster installed	dpkg -s pve-cluster 2>/dev/null | grep -q '^Status: install ok installed'
+pve-qemu-kvm installed	dpkg -s pve-qemu-kvm 2>/dev/null | grep -q '^Status: install ok installed'
+lxc-pve installed	dpkg -s lxc-pve 2>/dev/null | grep -q '^Status: install ok installed'
+proxmox origin pinned	grep -q 'o=Proxmox' /etc/apt/preferences.d/proxmox
+pmxcfs present	test -x /usr/bin/pmxcfs
+no proxmox kernel pulled	! dpkg -l 2>/dev/null | grep -qE '^ii\s+proxmox-(default-)?kernel'
+pve enterprise repo absent	! test -f /etc/apt/sources.list.d/pve-enterprise.list
+pve no-subscription repo present	test -f /etc/apt/sources.list.d/pve-no-subscription.list
