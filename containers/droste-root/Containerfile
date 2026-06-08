@@ -21,7 +21,7 @@ RUN echo 'droste:droste' | chpasswd \
     && mkdir -p /etc/systemd/network \
     && printf '[Match]\nName=en* eth*\n\n[Network]\nDHCP=yes\n' \
        > /etc/systemd/network/80-dhcp.network \
-    && printf '[Match]\nKind=veth\n\n[Link]\nUnmanaged=yes\n' \
+    && printf '[Match]\nName=!eth0\nKind=veth\n\n[Link]\nUnmanaged=yes\n' \
        > /etc/systemd/network/10-lxc-veth-unmanaged.network \
     && systemctl enable systemd-networkd \
     && systemctl enable serial-getty@ttyS0.service

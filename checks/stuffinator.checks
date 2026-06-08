@@ -25,23 +25,24 @@ droste in sudo group	id -nG droste | grep -qw sudo
 droste in kvm group	id -nG droste | grep -qw kvm
 systemd-networkd DHCP config	grep -q '^Name=en\* eth\*$' /etc/systemd/network/80-dhcp.network
 networkd veth-unmanaged match	grep -q '^Kind=veth$' /etc/systemd/network/10-lxc-veth-unmanaged.network
+networkd veth-unmanaged eth0-excluded	grep -q '^Name=!eth0$' /etc/systemd/network/10-lxc-veth-unmanaged.network
 networkd veth-unmanaged link	grep -q '^Unmanaged=yes$' /etc/systemd/network/10-lxc-veth-unmanaged.network
 systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
 serial-getty@ttyS0 enabled	test -L /etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 
 # VM-only packages
-qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install ok installed'
+qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install ok installed$'
 qemu-system-x86_64 binary present	command -v qemu-system-x86_64 >/dev/null
-virtiofsd installed	dpkg -s virtiofsd 2>/dev/null | grep -q '^Status: install ok installed'
-swtpm installed	dpkg -s swtpm 2>/dev/null | grep -q '^Status: install ok installed'
-pve-edk2-firmware-ovmf installed	dpkg -s pve-edk2-firmware-ovmf 2>/dev/null | grep -q '^Status: install ok installed'
-nbdkit installed	dpkg -s nbdkit 2>/dev/null | grep -q '^Status: install ok installed'
-nfs-kernel-server installed	dpkg -s nfs-kernel-server 2>/dev/null | grep -q '^Status: install ok installed'
-cpu-checker installed	dpkg -s cpu-checker 2>/dev/null | grep -q '^Status: install ok installed'
-irqbalance installed	dpkg -s irqbalance 2>/dev/null | grep -q '^Status: install ok installed'
-linux-cpupower installed	dpkg -s linux-cpupower 2>/dev/null | grep -q '^Status: install ok installed'
-fence-agents installed	dpkg -s fence-agents 2>/dev/null | grep -q '^Status: install ok installed'
-numactl installed	dpkg -s numactl 2>/dev/null | grep -q '^Status: install ok installed'
+virtiofsd installed	dpkg -s virtiofsd 2>/dev/null | grep -q '^Status: install ok installed$'
+swtpm installed	dpkg -s swtpm 2>/dev/null | grep -q '^Status: install ok installed$'
+pve-edk2-firmware-ovmf installed	dpkg -s pve-edk2-firmware-ovmf 2>/dev/null | grep -q '^Status: install ok installed$'
+nbdkit installed	dpkg -s nbdkit 2>/dev/null | grep -q '^Status: install ok installed$'
+nfs-kernel-server installed	dpkg -s nfs-kernel-server 2>/dev/null | grep -q '^Status: install ok installed$'
+cpu-checker installed	dpkg -s cpu-checker 2>/dev/null | grep -q '^Status: install ok installed$'
+irqbalance installed	dpkg -s irqbalance 2>/dev/null | grep -q '^Status: install ok installed$'
+linux-cpupower installed	dpkg -s linux-cpupower 2>/dev/null | grep -q '^Status: install ok installed$'
+fence-agents installed	dpkg -s fence-agents 2>/dev/null | grep -q '^Status: install ok installed$'
+numactl installed	dpkg -s numactl 2>/dev/null | grep -q '^Status: install ok installed$'
 
 # VM kernel module config
 kvm nested virt config	test -f /etc/modprobe.d/kvm-nested.conf
@@ -49,11 +50,11 @@ kvm nested virt config	test -f /etc/modprobe.d/kvm-nested.conf
 # Proxmox VE (pct/qm + pmxcfs, PVE-variant pinned)
 pct available	command -v pct >/dev/null
 qm available	command -v qm >/dev/null
-qemu-server installed	dpkg -s qemu-server 2>/dev/null | grep -q '^Status: install ok installed'
-pve-container installed	dpkg -s pve-container 2>/dev/null | grep -q '^Status: install ok installed'
-pve-cluster installed	dpkg -s pve-cluster 2>/dev/null | grep -q '^Status: install ok installed'
-pve-qemu-kvm installed	dpkg -s pve-qemu-kvm 2>/dev/null | grep -q '^Status: install ok installed'
-lxc-pve installed	dpkg -s lxc-pve 2>/dev/null | grep -q '^Status: install ok installed'
+qemu-server installed	dpkg -s qemu-server 2>/dev/null | grep -q '^Status: install ok installed$'
+pve-container installed	dpkg -s pve-container 2>/dev/null | grep -q '^Status: install ok installed$'
+pve-cluster installed	dpkg -s pve-cluster 2>/dev/null | grep -q '^Status: install ok installed$'
+pve-qemu-kvm installed	dpkg -s pve-qemu-kvm 2>/dev/null | grep -q '^Status: install ok installed$'
+lxc-pve installed	dpkg -s lxc-pve 2>/dev/null | grep -q '^Status: install ok installed$'
 proxmox origin pinned	grep -q 'o=Proxmox' /etc/apt/preferences.d/proxmox
 pmxcfs present	test -x /usr/bin/pmxcfs
 no proxmox kernel pulled	! dpkg -l 2>/dev/null | grep -qE '^ii\s+proxmox-(default-)?kernel'
