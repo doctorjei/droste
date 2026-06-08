@@ -37,18 +37,24 @@ RUN printf 'options kvm_intel nested=1\noptions kvm_amd nested=1\n' \
 # gemet's KVM-host kernel; the package install itself is kernel-independent.
 # policy-rc.d suppresses service starts so the pve-cluster/pmxcfs postinst
 # doesn't fail without a real cluster.
-RUN wget -qO /usr/share/keyrings/proxmox-release-trixie.gpg https://enterprise.proxmox.com/debian/proxmox-release-trixie.gpg \
+RUN wget --tries=3 -qO /tmp/pve.gpg https://enterprise.proxmox.com/debian/proxmox-release-trixie.gpg \
+    && test -s /tmp/pve.gpg \
+    && mv /tmp/pve.gpg /usr/share/keyrings/proxmox-release-trixie.gpg \
     && printf 'deb [signed-by=/usr/share/keyrings/proxmox-release-trixie.gpg] http://download.proxmox.com/debian/pve trixie pve-no-subscription\n' \
        > /etc/apt/sources.list.d/pve-no-subscription.list \
     && printf 'Package: *\nPin: release o=Proxmox\nPin-Priority: 1001\n' \
        > /etc/apt/preferences.d/proxmox \
     && echo 'postfix postfix/main_mailer_type select No configuration' | debconf-set-selections \
     && printf 'exit 101\n' > /usr/sbin/policy-rc.d \
-    && chmod 0755 /usr/sbin/policy-rc.d \
-    && apt-get -qq update \
+    && chmod 0755 /usr/sbin/policy-rc.d
+
+# Install minimal PVE: pct/qm + pmxcfs
+RUN apt-get -qq update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-       qemu-server pve-container pve-cluster \
-    && rm -f /usr/sbin/policy-rc.d \
+       qemu-server pve-container pve-cluster
+
+# Remove the install-time service-start guard + repo cruft
+RUN rm -f /usr/sbin/policy-rc.d \
     && rm -f /etc/apt/sources.list.d/pve-enterprise.list \
     && rm -rf /var/lib/apt/lists/*
 
