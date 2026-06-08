@@ -191,7 +191,12 @@ tooling, and the `kento` lifecycle tool.
 
 ### Tools in addition to droste-fiber (inherited) and lint (systemd reinstall)
 
-**Container management**: ```lxc, lxcfs, systemd-container```
+**Container management**: ```apparmor, lxc, lxcfs, systemd-container```
+
+(`apparmor` is installed explicitly here — `lxc` only Recommends it, and
+builds use `--no-install-recommends`; the parser is required for LXC's
+generated profile to load on an AppArmor-active kernel. yarn and fabric add
+it too; upper cloth tiers get it via `apparmor-utils`.)
 
 **Kernel-dependent**: ```cifs-utils, fatrace, ipvsadm, molly-guard, nfs-common```
 

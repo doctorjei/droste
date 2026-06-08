@@ -137,8 +137,10 @@ qcow2, no conversion.
    - **DHCP**: no network config exists by default. VM tiers create a
      systemd-networkd config for DHCP on physical ethernet interfaces
      (`[Match] Name=en* eth*`) and enable the service. A separate
-     higher-priority drop-in marks `Kind=veth` interfaces `Unmanaged=yes`,
-     so networkd leaves LXC veth pairs on their bridge.
+     higher-priority drop-in marks `Kind=veth` interfaces other than
+     `eth0` `Unmanaged=yes` (`[Match] Name=!eth0`), so networkd leaves LXC
+     veth pairs on their bridge while still managing the guest's own primary
+     NIC.
 
    (fstab is already empty in the canopy base — no fstab clearing needed.)
 
@@ -286,7 +288,7 @@ Pick the smallest tier that has what you need:
 | HA clustering, Ceph, DRBD | page | fabric | felt |
 | Testing, security, monitoring (incl. pytest) | tome | tapestry | amimono |
 | C/C++ + kernel/initramfs build | press | loom | stuffer |
-| Proxmox VE | gutenberg | jacquard | stuffinator |
+| Proxmox VE (pct/qm/pmxcfs) | — | — | stuffinator |
 
 **Wool L2+ tiers** (wool, felt, amimono, stuffer, stuffinator) include
 `qemu-system-x86` + `virtiofsd` and place the `droste` user in the `kvm`
@@ -324,7 +326,8 @@ sudo lxc-attach -n my-test -- ip addr show
 ```
 
 **VMs** use DHCP via systemd-networkd on physical ethernet interfaces
-(`[Match] Name=en* eth*`; veth interfaces are left unmanaged). Kento sets
+(`[Match] Name=en* eth*`; veth interfaces other than `eth0` are left
+unmanaged). Kento sets
 up user-mode networking with port forwarding for SSH.
 
 **Proxmox** hosts use `vmbr0` by default (auto-detected by kento).
