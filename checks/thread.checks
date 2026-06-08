@@ -29,6 +29,11 @@ fuse-overlayfs callable	command -v fuse-overlayfs
 lxc-create available	lxc-create --version
 systemd-nspawn available	command -v systemd-nspawn
 machinectl available	command -v machinectl
+# apparmor_parser is required for LXC's default `generated` profile on an
+# AppArmor-active kernel (gemet 1.7.2+). lxc only Recommends apparmor, and
+# builds run --no-install-recommends, so the parser is installed explicitly
+# (thread/yarn/fabric) or pulled via apparmor-utils (tapestry/loom/jacquard).
+apparmor_parser available	test -x /usr/sbin/apparmor_parser
 
 # Kento (OCI lifecycle)
 kento available	kento --version
