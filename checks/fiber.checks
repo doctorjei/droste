@@ -74,7 +74,7 @@ httpd available	command -v httpd
 # Python packaging
 pip3 available	pip3 --version
 python3 -m venv works	python3 -c "import venv"
-uv available	command -v uv || test -x /home/droste/.local/bin/uv
+uv/uvx available	command -v uv && command -v uvx
 python3-tomli-w available	python3 -c "import tomli_w"
 python3-passlib available	python3 -c "import passlib"
 
