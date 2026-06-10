@@ -12,6 +12,10 @@ on:
 # new manifest references without downloading or re-uploading image
 # layers. For tag v1.2.3, creates these additional tags on all 21
 # tiers: 1.2.3, 1.2, 1.
+#
+# Pre-release tags (version string containing a '-', e.g. v1.2.0-rc1)
+# create ONLY the full :1.2.0-rc1 tag and leave the moving :X.Y / :X
+# aliases pointing at the last stable release.
 
 permissions:
   contents: read
@@ -38,9 +42,15 @@ jobs:
           major="${full%%.*}"
           rest="${full#${major}.}"
           minor="${rest%%.*}"
+          if [[ "${full}" == *-* ]]; then
+            prerelease="true"
+          else
+            prerelease="false"
+          fi
           echo "full=${full}" >> "$GITHUB_OUTPUT"
           echo "majorminor=${major}.${minor}" >> "$GITHUB_OUTPUT"
           echo "major=${major}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
 
       - name: Re-tag all 21 droste images
         shell: bash
@@ -53,11 +63,17 @@ jobs:
             lint thread yarn fabric tapestry loom jacquard
             root hair wool felt amimono stuffer stuffinator
           )
-          VERSION_TAGS=(
-            "${{ steps.v.outputs.full }}"
-            "${{ steps.v.outputs.majorminor }}"
-            "${{ steps.v.outputs.major }}"
-          )
+          if [[ "${{ steps.v.outputs.prerelease }}" == "true" ]]; then
+            VERSION_TAGS=(
+              "${{ steps.v.outputs.full }}"
+            )
+          else
+            VERSION_TAGS=(
+              "${{ steps.v.outputs.full }}"
+              "${{ steps.v.outputs.majorminor }}"
+              "${{ steps.v.outputs.major }}"
+            )
+          fi
 
           for tier in "${TIERS[@]}"; do
             src="ghcr.io/${OWNER}/droste-${tier}:${SHA}"
