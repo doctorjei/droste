@@ -16,39 +16,43 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 
 ### App Tiers — paper/publishing (process containers)
 
-| Tier | Based on | Focus | Size |
-|------|----------|-------|------|
-| **seed** | canopy (gemet) | Minimal OCI base | 413 MB |
-| **fiber** | seed | Basic tools, containers, networking | 1.02 GB |
-| **sheet** | fiber | Storage, VM tooling | 1.63 GB |
-| **page** | sheet | HA clustering, Ceph | 2.1 GB |
-| **tome** | page | Testing, security, observability | 3.16 GB |
-| **press** | tome | C/C++ development toolchain | 3.89 GB |
-| **gutenberg** | press | Empty cap layer | 3.89 GB |
+| Tier | Based on | Focus | Pull size¹ |
+|------|----------|-------|------------|
+| **seed** | canopy (gemet) | Minimal OCI base | 196 MB |
+| **fiber** | seed | Basic tools, containers, networking | 568 MB |
+| **sheet** | fiber | Storage, VM tooling | 731 MB |
+| **page** | sheet | HA clustering, Ceph | 937 MB |
+| **tome** | page | Testing, security, observability | 1.38 GB |
+| **press** | tome | C/C++ development toolchain | 1.89 GB |
+| **gutenberg** | press | Empty cap layer | 1.89 GB |
 
 ### System Tiers — cloth/weaving (bootable via [kento](https://pypi.org/project/kento/))
 
-| Tier | Based on | Focus | Size |
-|------|----------|-------|------|
-| **lint** | seed | Bootable seed (systemd PID 1) | 553 MB |
-| **thread** | fiber | + kernel-dependent tools | 1.16 GB |
-| **yarn** | sheet | + lvm2, pciutils, nbd-client | 1.77 GB |
-| **fabric** | page | + drbd, iscsi, multipath | 2.25 GB |
-| **tapestry** | tome | + sg3-utils, smartmontools, qemu-arm | 3.44 GB |
-| **loom** | press | Same kernel packages as tapestry | 4.17 GB |
-| **jacquard** | gutenberg | Same kernel packages as tapestry | 4.17 GB |
+| Tier | Based on | Focus | Pull size¹ |
+|------|----------|-------|------------|
+| **lint** | seed | Bootable seed (systemd PID 1) | 269 MB |
+| **thread** | fiber | + kernel-dependent tools | 647 MB |
+| **yarn** | sheet | + lvm2, pciutils, nbd-client | 804 MB |
+| **fabric** | page | + drbd, iscsi, multipath | 1018 MB |
+| **tapestry** | tome | + sg3-utils, smartmontools, qemu-arm | 1.49 GB |
+| **loom** | press | Same kernel packages as tapestry | 2.01 GB |
+| **jacquard** | gutenberg | Same kernel packages as tapestry | 2.01 GB |
 
 ### VM Tiers — wool (VM-bootable via kento VM mode)
 
-| Tier | Based on | Focus |
-|------|----------|-------|
-| **root** | lint | VM-bootable lint |
-| **hair** | thread | VM-bootable thread |
-| **wool** | yarn | VM-bootable yarn |
-| **felt** | fabric | VM-bootable fabric |
-| **amimono** | tapestry | VM-bootable tapestry |
-| **stuffer** | loom | VM-bootable loom |
-| **stuffinator** | jacquard | VM-bootable jacquard |
+| Tier | Based on | Focus | Pull size¹ |
+|------|----------|-------|------------|
+| **root** | lint | VM-bootable lint | 317 MB |
+| **hair** | thread | VM-bootable thread | 696 MB |
+| **wool** | yarn | VM-bootable yarn | 959 MB |
+| **felt** | fabric | VM-bootable fabric | 1.47 GB |
+| **amimono** | tapestry | VM-bootable tapestry | 1.94 GB |
+| **stuffer** | loom | VM-bootable loom | 2.44 GB |
+| **stuffinator** | jacquard | VM-bootable jacquard | 2.77 GB |
+
+¹ Compressed download size from GHCR (`ghcr.io/doctorjei/droste-<tier>:1.2.0-rc1`,
+linux/amd64), measured 2026-06-10. Unpacked on-disk size in podman's store is
+larger. See [Getting the images](docs/usage.md#getting-the-images).
 
 Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Cloth tiers from **thread** onward also include LXC + systemd-container management tools and have `kento` pre-installed (via pipx), making them capable of nested LXC/VM operations from within a booted tier. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling. Wool L2+ tiers (wool, felt, amimono, stuffer, stuffinator) also add `qemu-system-x86` + `virtiofsd` and place the `droste` user in the `kvm` group, so they can host nested VMs (e.g., `kento create --vm` from inside a booted droste VM).
 
@@ -64,7 +68,15 @@ VM tiers have password `droste` for console/SSH login.
 
 ## Usage
 
+Pre-built images are published to GHCR for every tier — pull one, or build
+locally (see [BUILDING.md](BUILDING.md)). The examples below use `localhost/`
+(local builds); substitute `ghcr.io/doctorjei/droste-<tier>:<tag>` to use the
+published images.
+
 ```bash
+# Pull a prebuilt image from GHCR (all 21 tiers published)
+podman pull ghcr.io/doctorjei/droste-thread:latest
+
 # Process container (app tier)
 podman run --rm -it localhost/droste-fiber bash
 
@@ -77,7 +89,8 @@ sudo kento container create localhost/droste-root --vm --name vm1 --start
 ssh -p 10022 droste@localhost   # password: droste
 ```
 
-See [docs/usage.md](docs/usage.md) for detailed runtime documentation and
+See [docs/usage.md](docs/usage.md) for detailed runtime documentation (including
+[Getting the images](docs/usage.md#getting-the-images)) and
 [BUILDING.md](BUILDING.md) for build instructions.
 
 ## droste-fiber: Basic Tools & Container Tools

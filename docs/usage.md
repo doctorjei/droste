@@ -18,6 +18,51 @@ sudo kento container create localhost/droste-root --vm --name vm1 --start
 ssh -p 10022 droste@localhost   # password: droste
 ```
 
+## Getting the Images
+
+There are two ways to get droste images: pull the prebuilt ones from GHCR, or
+build them locally (see [BUILDING.md](../BUILDING.md)). All 21 tiers are
+published to the GitHub Container Registry under:
+
+```
+ghcr.io/doctorjei/droste-<tier>:<tag>
+```
+
+```bash
+# Newest released image for a tier
+podman pull ghcr.io/doctorjei/droste-thread:latest
+
+# A specific tier line + version
+podman pull ghcr.io/doctorjei/droste-stuffinator:1.2.0-rc1
+podman pull ghcr.io/doctorjei/droste-fiber:1.1.0
+```
+
+The `<tier>` is any of the 21 image names (seed, fiber, …, stuffinator). The
+images are `linux/amd64`.
+
+### Tags & releases
+
+Releases follow semantic versioning. A final release `vX.Y.Z` tags every tier's
+image with the full version plus moving aliases; a pre-release (`vX.Y.Z-rcN`)
+publishes only the full version string:
+
+| Tag | Points at | Moves on new release? |
+|-----|-----------|-----------------------|
+| `:latest` | newest **final** release | yes (finals only) |
+| `:X` (e.g. `:1`) | newest final in that major | yes |
+| `:X.Y` (e.g. `:1.1`) | newest final in that minor | yes |
+| `:X.Y.Z` (e.g. `:1.1.0`) | that exact final release | no (immutable) |
+| `:X.Y.Z-rcN` (e.g. `:1.2.0-rc1`) | that exact pre-release | no (immutable) |
+
+Released lines so far: **v1.0.0**, **v1.1.0** (finals), and **v1.2.0-rc1**
+(current pre-release). Pre-releases do **not** move `:latest`, `:X.Y`, or `:X` —
+pin the full `:X.Y.Z-rcN` string to test one. For reproducible setups, pin an
+immutable tag (`:1.1.0`) rather than a moving alias.
+
+> The runtime examples throughout this doc use `localhost/droste-*` (local
+> builds). To use the published images instead, substitute the GHCR reference,
+> e.g. `ghcr.io/doctorjei/droste-thread:latest`.
+
 ## Three Runtime Modes
 
 | Mode | Image line | Runtime | Init | Access |
