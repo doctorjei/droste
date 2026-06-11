@@ -14,7 +14,9 @@ iscsiadm available	test -x /usr/sbin/iscsiadm
 targetcli available	command -v targetcli
 multipath available	test -x /usr/sbin/multipathd
 
+@stop
 # HA/storage daemons disabled on boot in LXC (packages stay installed).
+# Tier-local (below @stop): NOT inherited by wool, which re-enables some.
 # Target-agnostic: these units' WantedBy targets vary, so glob all *.wants/.
 sbd disabled	! ls /etc/systemd/system/*.wants/sbd.service >/dev/null 2>&1
 sbd_remote disabled	! ls /etc/systemd/system/*.wants/sbd_remote.service >/dev/null 2>&1

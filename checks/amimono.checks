@@ -46,6 +46,7 @@ numactl installed	dpkg -s numactl 2>/dev/null | grep -q '^Status: install ok ins
 # auditd (wool-only: host-global audit subsystem, never runs in a container)
 auditd installed	dpkg -s auditd 2>/dev/null | grep -q '^Status: install ok installed'
 auditd available	test -x /usr/sbin/auditd
+auditctl available	test -x /usr/sbin/auditctl
 auditd enabled	test -L /etc/systemd/system/multi-user.target.wants/auditd.service
 
 # HA tooling enablement (wool: real kernel — rtslib re-enabled; sbd stays disabled)
@@ -54,6 +55,7 @@ sbd disabled	! ls /etc/systemd/system/*.wants/sbd.service >/dev/null 2>&1
 sbd_remote disabled	! ls /etc/systemd/system/*.wants/sbd_remote.service >/dev/null 2>&1
 openvswitch-switch enabled	ls /etc/systemd/system/*.wants/openvswitch-switch.service >/dev/null 2>&1
 bird disabled	! ls /etc/systemd/system/*.wants/bird.service >/dev/null 2>&1
+dnsmasq disabled	! ls /etc/systemd/system/*.wants/dnsmasq.service >/dev/null 2>&1
 
 # VM kernel module config
 kvm nested virt config	test -f /etc/modprobe.d/kvm-nested.conf
