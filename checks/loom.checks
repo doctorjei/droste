@@ -11,3 +11,12 @@
 @quiet press.checks
 
 # No additional packages — same as press
+
+# HA/storage daemons disabled on boot in LXC (packages stay installed).
+# Target-agnostic: these units' WantedBy targets vary, so glob all *.wants/.
+sbd disabled	! ls /etc/systemd/system/*.wants/sbd.service >/dev/null 2>&1
+sbd_remote disabled	! ls /etc/systemd/system/*.wants/sbd_remote.service >/dev/null 2>&1
+rtslib-fb-targetctl disabled	! ls /etc/systemd/system/*.wants/rtslib-fb-targetctl.service >/dev/null 2>&1
+openvswitch-switch disabled	! ls /etc/systemd/system/*.wants/openvswitch-switch.service >/dev/null 2>&1
+bird disabled	! ls /etc/systemd/system/*.wants/bird.service >/dev/null 2>&1
+dnsmasq disabled	! ls /etc/systemd/system/*.wants/dnsmasq.service >/dev/null 2>&1

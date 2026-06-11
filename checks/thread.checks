@@ -35,5 +35,9 @@ machinectl available	command -v machinectl
 # (thread/yarn/fabric) or pulled via apparmor-utils (tapestry/loom/jacquard).
 apparmor_parser available	test -x /usr/sbin/apparmor_parser
 
+# HA/storage daemons disabled on boot in LXC (packages stay installed).
+# Target-agnostic: these units' WantedBy targets vary, so glob all *.wants/.
+dnsmasq disabled	! ls /etc/systemd/system/*.wants/dnsmasq.service >/dev/null 2>&1
+
 # Kento (OCI lifecycle)
 kento available	kento --version

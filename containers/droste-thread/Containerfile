@@ -35,6 +35,10 @@ RUN systemctl enable systemd-networkd.service \
     && test -L /etc/systemd/system/multi-user.target.wants/ssh.service \
     && test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
 
+# dnsmasq auto-starts but collides with systemd-resolved on :53 — disable on
+# boot (usable on-demand tool; resolved stays the system resolver).
+RUN systemctl disable dnsmasq.service
+
 # Kento (OCI → LXC/VM lifecycle tool)
 RUN pipx install --global kento
 

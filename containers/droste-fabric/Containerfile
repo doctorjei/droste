@@ -38,6 +38,12 @@ RUN systemctl enable systemd-networkd.service \
     && test -L /etc/systemd/system/multi-user.target.wants/ssh.service \
     && test -L /etc/systemd/system/multi-user.target.wants/systemd-networkd.service
 
+# Disable HA/storage daemons that fail or are pointless on boot inside an
+# LXC (sbd needs configured fencing; rtslib-fb-targetctl needs target_core_mod).
+# Packages stay installed (test tools) — just no boot auto-start. The wool/VM
+# siblings re-enable rtslib-fb-targetctl; sbd stays disabled everywhere.
+RUN systemctl disable sbd.service sbd_remote.service rtslib-fb-targetctl.service dnsmasq.service
+
 # Kento (OCI → LXC/VM lifecycle tool)
 RUN pipx install --global kento
 

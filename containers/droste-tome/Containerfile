@@ -14,7 +14,7 @@ RUN apt-get -qq update \
       prometheus-node-exporter lnav \
       postgresql-client redis-tools \
       lynis aide \
-      arp-scan tcpreplay auditd \
+      arp-scan tcpreplay \
       blktrace xorriso ipmitool \
       python3-pytest \
     && rm -rf /var/lib/apt/lists/*

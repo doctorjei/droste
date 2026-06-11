@@ -21,7 +21,7 @@ RUN apt-get -qq update \
        qemu-guest-agent \
        virtiofsd nbdkit \
        nfs-kernel-server cpu-checker irqbalance linux-cpupower \
-       fence-agents numactl \
+       fence-agents numactl auditd \
     && rm -rf /var/lib/apt/lists/*
 
 # VM kernel module config (nbd/drbd are builtin in gemet's kernel now)
@@ -68,4 +68,7 @@ RUN echo 'droste:droste' | chpasswd \
     && printf '[Match]\nName=!eth0\nKind=veth\n\n[Link]\nUnmanaged=yes\n' \
        > /etc/systemd/network/10-lxc-veth-unmanaged.network \
     && systemctl enable systemd-networkd \
-    && systemctl enable serial-getty@ttyS0.service
+    && systemctl enable serial-getty@ttyS0.service \
+    && systemctl enable auditd.service \
+    && systemctl enable rtslib-fb-targetctl.service \
+    && systemctl enable openvswitch-switch.service
