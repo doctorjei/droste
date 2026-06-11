@@ -50,9 +50,10 @@ Each tier builds on the previous one. Three lines: paper (light), cloth (medium)
 | **stuffer** | loom | VM-bootable loom | 2.44 GB |
 | **stuffinator** | jacquard | VM-bootable jacquard | 2.77 GB |
 
-¹ Compressed download size from GHCR (`ghcr.io/doctorjei/droste-<tier>:1.2.0-rc1`,
-linux/amd64), measured 2026-06-10. Unpacked on-disk size in podman's store is
-larger. See [Getting the images](docs/usage.md#getting-the-images).
+¹ Compressed download size from GHCR (`ghcr.io/doctorjei/droste-<tier>`,
+linux/amd64), measured 2026-06-10 against `:1.2.0-rc1`; figures are approximate
+and ≈ unchanged across the v1.2.x finals. Unpacked on-disk size in podman's
+store is larger. See [Getting the images](docs/usage.md#getting-the-images).
 
 Each system tier adds init/systemd (21 packages) plus cumulative kernel-dependent packages. Cloth tiers from **thread** onward also include LXC + systemd-container management tools and have `kento` pre-installed (via pipx), making them capable of nested LXC/VM operations from within a booted tier. Each VM tier adds /boot/vmlinuz + initramfs, password, DHCP config, and VM-specific packages (qemu-guest-agent, watchdog, libvirt, nested virt, etc.) on top of its system sibling. Wool L2+ tiers (wool, felt, amimono, stuffer, stuffinator) also add `qemu-system-x86` + `virtiofsd` and place the `droste` user in the `kvm` group, so they can host nested VMs (e.g., `kento create --vm` from inside a booted droste VM).
 

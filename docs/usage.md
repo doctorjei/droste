@@ -33,7 +33,7 @@ ghcr.io/doctorjei/droste-<tier>:<tag>
 podman pull ghcr.io/doctorjei/droste-thread:latest
 
 # A specific tier line + version
-podman pull ghcr.io/doctorjei/droste-stuffinator:1.2.0-rc1
+podman pull ghcr.io/doctorjei/droste-stuffinator:1.2.1
 podman pull ghcr.io/doctorjei/droste-fiber:1.1.0
 ```
 
@@ -54,10 +54,11 @@ publishes only the full version string:
 | `:X.Y.Z` (e.g. `:1.1.0`) | that exact final release | no (immutable) |
 | `:X.Y.Z-rcN` (e.g. `:1.2.0-rc1`) | that exact pre-release | no (immutable) |
 
-Released lines so far: **v1.0.0**, **v1.1.0** (finals), and **v1.2.0-rc1**
-(current pre-release). Pre-releases do **not** move `:latest`, `:X.Y`, or `:X` —
-pin the full `:X.Y.Z-rcN` string to test one. For reproducible setups, pin an
-immutable tag (`:1.1.0`) rather than a moving alias.
+Released lines so far: **v1.0.0**, **v1.1.0**, **v1.2.0**, and **v1.2.1**
+(finals; `:latest` tracks v1.2.1). `v1.2.0-rc1`/`-rc2` were pre-releases on the
+way to v1.2.0. Pre-releases do **not** move `:latest`, `:X.Y`, or `:X` — pin the
+full `:X.Y.Z-rcN` string to test one. For reproducible setups, pin an immutable
+tag (`:1.2.1`) rather than a moving alias.
 
 > The runtime examples throughout this doc use `localhost/droste-*` (local
 > builds). To use the published images instead, substitute the GHCR reference,
