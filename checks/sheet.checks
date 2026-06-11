@@ -7,12 +7,12 @@ envsubst available	envsubst --version
 mksquashfs available	command -v mksquashfs
 
 # Filesystem tools
-gdisk available	command -v gdisk
-parted available	parted --version
+gdisk available	test -x /usr/sbin/gdisk
+parted available	test -x /usr/sbin/parted
 mkfs.btrfs available	command -v mkfs.btrfs
-cryptsetup available	command -v cryptsetup
-mdadm available	command -v mdadm
-mkfs.fat available	command -v mkfs.fat
+cryptsetup available	test -x /usr/sbin/cryptsetup
+mdadm available	test -x /usr/sbin/mdadm
+mkfs.fat available	test -x /usr/sbin/mkfs.fat
 mount.ntfs available	command -v mount.ntfs-3g
 mtools available	command -v mtools
 ncdu available	ncdu -v

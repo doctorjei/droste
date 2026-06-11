@@ -20,5 +20,5 @@ systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/sys
 serial-getty@ttyS0 enabled	test -L /etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 
 # VM-only packages
-qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install ok installed'
-watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install ok installed'
+qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install ok installed$'
+watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install ok installed$'

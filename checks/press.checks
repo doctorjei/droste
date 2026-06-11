@@ -28,11 +28,11 @@ libtoolize available	command -v libtoolize
 # Kernel/initramfs build
 bison available	command -v bison
 flex available	command -v flex
-libelf-dev installed	dpkg -s libelf-dev 2>/dev/null | grep -q '^Status: install ok installed'
-libssl-dev installed	dpkg -s libssl-dev 2>/dev/null | grep -q '^Status: install ok installed'
-libncurses-dev installed	dpkg -s libncurses-dev 2>/dev/null | grep -q '^Status: install ok installed'
+libelf-dev installed	dpkg -s libelf-dev 2>/dev/null | grep -q '^Status: install ok installed$'
+libssl-dev installed	dpkg -s libssl-dev 2>/dev/null | grep -q '^Status: install ok installed$'
+libncurses-dev installed	dpkg -s libncurses-dev 2>/dev/null | grep -q '^Status: install ok installed$'
 cpio available	command -v cpio
-busybox-static available	dpkg -s busybox-static 2>/dev/null | grep -q "^Status: install ok installed"
+busybox-static available	dpkg -s busybox-static 2>/dev/null | grep -q "^Status: install ok installed$"
 
 # Shell linting
 shellcheck available	command -v shellcheck

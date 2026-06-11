@@ -15,7 +15,7 @@ nmap available	command -v nmap
 arp-scan available	command -v arp-scan
 
 # Load balancing
-haproxy available	command -v haproxy
+haproxy available	test -x /usr/sbin/haproxy
 
 # Hardware management
 ipmitool available	command -v ipmitool
@@ -31,7 +31,7 @@ blktrace available	command -v blktrace
 xorriso available	command -v xorriso
 
 # Routing
-bird available	command -v bird
+bird available	test -x /usr/sbin/bird
 
 # Container ecosystem
 buildah available	command -v buildah

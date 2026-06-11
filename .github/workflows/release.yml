@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*.*.*'
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
 # Tag push: re-tag the already-built per-SHA images on GHCR with
 # semantic-version aliases. Assumes the main-branch build workflow has
 # already built and pushed ghcr.io/<owner>/droste-<tier>:<sha> for the
@@ -39,6 +43,7 @@ jobs:
         run: |
           tag="${{ github.ref_name }}"
           full="${tag#v}"
+          [[ "$full" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::Malformed release tag: $full"; exit 1; }
           major="${full%%.*}"
           rest="${full#${major}.}"
           minor="${rest%%.*}"
@@ -63,6 +68,18 @@ jobs:
             lint thread yarn fabric tapestry loom jacquard
             root hair wool felt amimono stuffer stuffinator
           )
+          # Pre-flight: verify every source :<sha> image exists BEFORE moving
+          # any alias, so a tag on a commit whose images were never built
+          # (matrix still running, skipped by the path filter, or failed)
+          # aborts the job instead of leaving a half-moved, inconsistent set.
+          for tier in "${TIERS[@]}"; do
+            src="ghcr.io/${OWNER}/droste-${tier}:${SHA}"
+            if ! docker buildx imagetools inspect "${src}" >/dev/null 2>&1; then
+              echo "::error::Source image missing: ${src} (droste-${tier} @ ${SHA}). No aliases moved."
+              exit 1
+            fi
+          done
+
           if [[ "${{ steps.v.outputs.prerelease }}" == "true" ]]; then
             VERSION_TAGS=(
               "${{ steps.v.outputs.full }}"

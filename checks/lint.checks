@@ -1,22 +1,22 @@
 @quiet seed.checks
 
 # Init/systemd packages (added back for kento/LXC boot)
-init installed	dpkg -s init 2>/dev/null | grep -q "^Status: install ok installed"
-systemd installed	dpkg -s systemd 2>/dev/null | grep -q "^Status: install ok installed"
-systemd-resolved installed	dpkg -s systemd-resolved 2>/dev/null | grep -q "^Status: install ok installed"
-systemd-sysv installed	dpkg -s systemd-sysv 2>/dev/null | grep -q "^Status: install ok installed"
-systemd-timesyncd installed	dpkg -s systemd-timesyncd 2>/dev/null | grep -q "^Status: install ok installed"
-udev installed	dpkg -s udev 2>/dev/null | grep -q "^Status: install ok installed"
-dbus installed	dpkg -s dbus 2>/dev/null | grep -q "^Status: install ok installed"
-dbus-daemon installed	dpkg -s dbus-daemon 2>/dev/null | grep -q "^Status: install ok installed"
-polkitd installed	dpkg -s polkitd 2>/dev/null | grep -q "^Status: install ok installed"
-cloud-init installed	dpkg -s cloud-init 2>/dev/null | grep -q "^Status: install ok installed"
-cloud-guest-utils installed	dpkg -s cloud-guest-utils 2>/dev/null | grep -q "^Status: install ok installed"
+init installed	dpkg -s init 2>/dev/null | grep -q "^Status: install ok installed$"
+systemd installed	dpkg -s systemd 2>/dev/null | grep -q "^Status: install ok installed$"
+systemd-resolved installed	dpkg -s systemd-resolved 2>/dev/null | grep -q "^Status: install ok installed$"
+systemd-sysv installed	dpkg -s systemd-sysv 2>/dev/null | grep -q "^Status: install ok installed$"
+systemd-timesyncd installed	dpkg -s systemd-timesyncd 2>/dev/null | grep -q "^Status: install ok installed$"
+udev installed	dpkg -s udev 2>/dev/null | grep -q "^Status: install ok installed$"
+dbus installed	dpkg -s dbus 2>/dev/null | grep -q "^Status: install ok installed$"
+dbus-daemon installed	dpkg -s dbus-daemon 2>/dev/null | grep -q "^Status: install ok installed$"
+polkitd installed	dpkg -s polkitd 2>/dev/null | grep -q "^Status: install ok installed$"
+cloud-init installed	dpkg -s cloud-init 2>/dev/null | grep -q "^Status: install ok installed$"
+cloud-guest-utils installed	dpkg -s cloud-guest-utils 2>/dev/null | grep -q "^Status: install ok installed$"
 cloud-init droste config exists	test -f /etc/cloud/cloud.cfg.d/99-droste.cfg
 cloud-init datasource list pinned	grep -q '^datasource_list:' /etc/cloud/cloud.cfg.d/99-droste.cfg
 cloud-init NoCloud datasource present	grep -q 'NoCloud' /etc/cloud/cloud.cfg.d/99-droste.cfg
-kmod installed	dpkg -s kmod 2>/dev/null | grep -q "^Status: install ok installed"
-apparmor installed	dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok installed"
+kmod installed	dpkg -s kmod 2>/dev/null | grep -q "^Status: install ok installed$"
+apparmor installed	dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok installed$"
 
 # Init functional
 /sbin/init exists	test -x /sbin/init
@@ -29,7 +29,7 @@ getty@console enabled	test -L /etc/systemd/system/getty.target.wants/getty@conso
 
 # SSH daemon (installed here alongside systemd so the postinst enables
 # ssh.service naturally — see oci/seed-oci-exclude.txt comment)
-openssh-server installed	dpkg -s openssh-server 2>/dev/null | grep -q "^Status: install ok installed"
+openssh-server installed	dpkg -s openssh-server 2>/dev/null | grep -q "^Status: install ok installed$"
 openssh-sftp-server installed	test -x /usr/lib/openssh/sftp-server
 ssh-import-id available	command -v ssh-import-id
 

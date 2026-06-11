@@ -172,7 +172,7 @@ do_test() {
     local out
 
     # Run @quiet inherited check files (failures only)
-    while IFS= read -r line; do
+    while IFS= read -r line || [[ -n "$line" ]]; do
         [[ "$line" =~ ^@quiet\  ]] || continue
         local qfile="${line#@quiet }"
         qfile="$PROJECT_DIR/checks/$qfile"
@@ -184,7 +184,7 @@ do_test() {
         fi
         # @stop marks checks private to this file — run for its own `test`,
         # but NOT inherited by children via @quiet.
-        while IFS= read -r qline; do
+        while IFS= read -r qline || [[ -n "$qline" ]]; do
             [[ -z "$qline" ]] && continue
             [[ "$qline" =~ ^# ]] && continue
             [[ "$qline" =~ ^@ ]] && continue
@@ -204,11 +204,11 @@ do_test() {
                 errors+=("(${qfile##*/}) $desc")
                 fail=$((fail + 1))
             fi
-        done < <(sed '/@stop/,$d' "$qfile")
+        done < <(sed '/^@stop[[:space:]]*$/,$d' "$qfile")
     done < "$checkfile"
 
     # Run this file's own tests verbosely (skip directives)
-    while IFS= read -r line; do
+    while IFS= read -r line || [[ -n "$line" ]]; do
         [[ -z "$line" ]] && continue
         [[ "$line" =~ ^@ ]] && continue
         if [[ "$line" =~ ^#\  ]]; then

@@ -33,9 +33,9 @@ fstab has no mount entries	test -f /etc/fstab && ! grep -qvE '^#|^$' /etc/fstab
 @stop
 # Excluded packages should NOT be present as explicit installs
 # (some may appear as deps — that's OK, we just verify the seed layer is clean)
-no init package	! dpkg -s init 2>/dev/null | grep -q "^Status: install ok installed"
-no udev package	! dpkg -s udev 2>/dev/null | grep -q "^Status: install ok installed"
-no cloud-init package	! dpkg -s cloud-init 2>/dev/null | grep -q "^Status: install ok installed"
-no polkitd package	! dpkg -s polkitd 2>/dev/null | grep -q "^Status: install ok installed"
-no unattended-upgrades	! dpkg -s unattended-upgrades 2>/dev/null | grep -q "^Status: install ok installed"
-no apparmor package	! dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok installed"
+no init package	! dpkg -s init 2>/dev/null | grep -q "^Status: install ok installed$"
+no udev package	! dpkg -s udev 2>/dev/null | grep -q "^Status: install ok installed$"
+no cloud-init package	! dpkg -s cloud-init 2>/dev/null | grep -q "^Status: install ok installed$"
+no polkitd package	! dpkg -s polkitd 2>/dev/null | grep -q "^Status: install ok installed$"
+no unattended-upgrades	! dpkg -s unattended-upgrades 2>/dev/null | grep -q "^Status: install ok installed$"
+no apparmor package	! dpkg -s apparmor 2>/dev/null | grep -q "^Status: install ok installed$"

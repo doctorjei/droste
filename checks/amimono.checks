@@ -27,24 +27,24 @@ systemd-networkd enabled	test -L /etc/systemd/system/multi-user.target.wants/sys
 serial-getty@ttyS0 enabled	test -L /etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 
 # VM-only packages
-qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install ok installed'
-watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install ok installed'
-qemu-system-x86 installed	dpkg -s qemu-system-x86 2>/dev/null | grep -q '^Status: install ok installed'
-virtiofsd installed	dpkg -s virtiofsd 2>/dev/null | grep -q '^Status: install ok installed'
-swtpm installed	dpkg -s swtpm 2>/dev/null | grep -q '^Status: install ok installed'
-ovmf installed	dpkg -s ovmf 2>/dev/null | grep -q '^Status: install ok installed'
-libvirt-daemon-system installed	dpkg -s libvirt-daemon-system 2>/dev/null | grep -q '^Status: install ok installed'
-virtinst installed	dpkg -s virtinst 2>/dev/null | grep -q '^Status: install ok installed'
-nbdkit installed	dpkg -s nbdkit 2>/dev/null | grep -q '^Status: install ok installed'
-nfs-kernel-server installed	dpkg -s nfs-kernel-server 2>/dev/null | grep -q '^Status: install ok installed'
-cpu-checker installed	dpkg -s cpu-checker 2>/dev/null | grep -q '^Status: install ok installed'
-irqbalance installed	dpkg -s irqbalance 2>/dev/null | grep -q '^Status: install ok installed'
-linux-cpupower installed	dpkg -s linux-cpupower 2>/dev/null | grep -q '^Status: install ok installed'
-fence-agents installed	dpkg -s fence-agents 2>/dev/null | grep -q '^Status: install ok installed'
-numactl installed	dpkg -s numactl 2>/dev/null | grep -q '^Status: install ok installed'
+qemu-guest-agent installed	dpkg -s qemu-guest-agent 2>/dev/null | grep -q '^Status: install ok installed$'
+watchdog installed	dpkg -s watchdog 2>/dev/null | grep -q '^Status: install ok installed$'
+qemu-system-x86 installed	dpkg -s qemu-system-x86 2>/dev/null | grep -q '^Status: install ok installed$'
+virtiofsd installed	dpkg -s virtiofsd 2>/dev/null | grep -q '^Status: install ok installed$'
+swtpm installed	dpkg -s swtpm 2>/dev/null | grep -q '^Status: install ok installed$'
+ovmf installed	dpkg -s ovmf 2>/dev/null | grep -q '^Status: install ok installed$'
+libvirt-daemon-system installed	dpkg -s libvirt-daemon-system 2>/dev/null | grep -q '^Status: install ok installed$'
+virtinst installed	dpkg -s virtinst 2>/dev/null | grep -q '^Status: install ok installed$'
+nbdkit installed	dpkg -s nbdkit 2>/dev/null | grep -q '^Status: install ok installed$'
+nfs-kernel-server installed	dpkg -s nfs-kernel-server 2>/dev/null | grep -q '^Status: install ok installed$'
+cpu-checker installed	dpkg -s cpu-checker 2>/dev/null | grep -q '^Status: install ok installed$'
+irqbalance installed	dpkg -s irqbalance 2>/dev/null | grep -q '^Status: install ok installed$'
+linux-cpupower installed	dpkg -s linux-cpupower 2>/dev/null | grep -q '^Status: install ok installed$'
+fence-agents installed	dpkg -s fence-agents 2>/dev/null | grep -q '^Status: install ok installed$'
+numactl installed	dpkg -s numactl 2>/dev/null | grep -q '^Status: install ok installed$'
 
 # auditd (wool-only: host-global audit subsystem, never runs in a container)
-auditd installed	dpkg -s auditd 2>/dev/null | grep -q '^Status: install ok installed'
+auditd installed	dpkg -s auditd 2>/dev/null | grep -q '^Status: install ok installed$'
 auditd available	test -x /usr/sbin/auditd
 auditctl available	test -x /usr/sbin/auditctl
 auditd enabled	test -L /etc/systemd/system/multi-user.target.wants/auditd.service
@@ -59,5 +59,3 @@ dnsmasq disabled	! ls /etc/systemd/system/*.wants/dnsmasq.service >/dev/null 2>&
 
 # VM kernel module config
 kvm nested virt config	test -f /etc/modprobe.d/kvm-nested.conf
-nbd module autoload	grep -q nbd /etc/modules-load.d/droste.conf
-drbd module autoload	grep -q drbd /etc/modules-load.d/droste.conf

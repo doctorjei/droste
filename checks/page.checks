@@ -6,7 +6,7 @@
 crm_mon available	crm_mon --version
 pcs available	command -v pcs
 resource agents installed	test -d /usr/lib/ocf/resource.d
-keepalived available	command -v keepalived
+keepalived available	test -x /usr/sbin/keepalived
 
 # Cluster
 clush available	clush --version
@@ -16,10 +16,10 @@ ceph available	ceph --version
 rbd available	rbd --version
 
 # Networking
-ebtables available	command -v ebtables
+ebtables available	test -x /usr/sbin/ebtables
 
 # Fencing
-fence-agents-common installed	dpkg -s fence-agents-common >/dev/null 2>&1
+fence-agents-common installed	dpkg -s fence-agents-common 2>/dev/null | grep -q '^Status: install ok installed$'
 
 # PXE
 pxelinux.0 exists	test -f /usr/lib/PXELINUX/pxelinux.0

@@ -7,9 +7,9 @@
 @quiet page.checks
 
 # Kernel-dependent (fabric additions)
-drbdadm available	command -v drbdadm
-sbd available	command -v sbd
-dlm_controld available	command -v dlm_controld
+drbdadm available	test -x /usr/sbin/drbdadm
+sbd available	test -x /usr/sbin/sbd
+dlm_controld available	test -x /usr/sbin/dlm_controld
 iscsiadm available	test -x /usr/sbin/iscsiadm
 targetcli available	command -v targetcli
 multipath available	test -x /usr/sbin/multipathd

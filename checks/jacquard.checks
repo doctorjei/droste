@@ -9,6 +9,8 @@
 @quiet tome.checks
 @quiet tapestry.checks
 @quiet press.checks
+@quiet loom.checks
+@quiet gutenberg.checks
 
 # Empty cap layer — no additional packages
 
