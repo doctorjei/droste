@@ -1,7 +1,7 @@
 # Packages stripped by canopy that droste-seed restores.
 # See plans/canopy-migration.md R7 for audit and rationale.
 # Verified against canopy:1.4.0 dpkg --get-selections (187 pkgs installed).
-# 1.4.1 only adds systemd-resolved to canopy's PURGELIST per tenkei release
+# 1.4.1 only adds systemd-resolved to canopy's PURGELIST per gemet release
 # notes; not in this list, so 1.4.1-compatible without re-verification.
 # 1.7.3 is the current pinned version; compatibility has not been re-audited
 # against canopy's PURGELIST — update this comment after verifying build.

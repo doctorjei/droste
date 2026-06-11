@@ -20,8 +20,7 @@ RUN apt-get -qq update \
 
 # VM kernel module config
 RUN printf 'options kvm_intel nested=1\noptions kvm_amd nested=1\n' \
-       > /etc/modprobe.d/kvm-nested.conf \
-    && printf 'nbd\ndrbd\n' > /etc/modules-load.d/droste.conf
+       > /etc/modprobe.d/kvm-nested.conf
 
 # VM boot fixes: set login password, enable DHCP + serial console
 RUN echo 'droste:droste' | chpasswd \

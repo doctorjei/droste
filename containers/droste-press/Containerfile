@@ -29,4 +29,4 @@ USER droste
 ENV PATH="/home/droste/.local/bin:${PATH}"
 
 # ── Python dev toolchain (pipx) ──
-RUN for pkg in black isort ruff mypy pre-commit twine bump-my-version; do pipx install "$pkg"; done
+RUN set -e; for pkg in black isort ruff mypy pre-commit twine bump-my-version; do pipx install "$pkg"; done
