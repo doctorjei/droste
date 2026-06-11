@@ -3,7 +3,7 @@
 # Verified against canopy:1.4.0 dpkg --get-selections (187 pkgs installed).
 # 1.4.1 only adds systemd-resolved to canopy's PURGELIST per tenkei release
 # notes; not in this list, so 1.4.1-compatible without re-verification.
-# 1.7.2 is the current pinned version; compatibility has not been re-audited
+# 1.7.3 is the current pinned version; compatibility has not been re-audited
 # against canopy's PURGELIST — update this comment after verifying build.
 # Note: coreutils is installed in a prior RUN layer in the Containerfile
 # (must beat other postinsts to /usr/bin/ln etc.), not listed here.
