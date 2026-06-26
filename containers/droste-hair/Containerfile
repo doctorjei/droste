@@ -13,7 +13,8 @@ COPY --from=gemet-boot /boot/initramfs.img /boot/initramfs.img
 RUN apt-get -qq update \
     && apt-get install -y -qq --no-install-recommends \
        qemu-guest-agent watchdog \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # VM boot fixes: set login password, enable DHCP + serial console
 RUN echo 'droste:droste' | chpasswd \

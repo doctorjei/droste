@@ -54,6 +54,7 @@ auditd enabled	test -L /etc/systemd/system/multi-user.target.wants/auditd.servic
 rtslib-fb-targetctl enabled	ls /etc/systemd/system/*.wants/rtslib-fb-targetctl.service >/dev/null 2>&1
 sbd disabled	! ls /etc/systemd/system/*.wants/sbd.service >/dev/null 2>&1
 sbd_remote disabled	! ls /etc/systemd/system/*.wants/sbd_remote.service >/dev/null 2>&1
+dlm disabled	! ls /etc/systemd/system/*.wants/dlm.service >/dev/null 2>&1
 openvswitch-switch enabled	ls /etc/systemd/system/*.wants/openvswitch-switch.service >/dev/null 2>&1
 bird disabled	! ls /etc/systemd/system/*.wants/bird.service >/dev/null 2>&1
 dnsmasq disabled	! ls /etc/systemd/system/*.wants/dnsmasq.service >/dev/null 2>&1

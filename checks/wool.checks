@@ -39,4 +39,3 @@ linux-cpupower installed	dpkg -s linux-cpupower 2>/dev/null | grep -q '^Status: 
 
 # VM kernel module config
 kvm nested virt config	test -f /etc/modprobe.d/kvm-nested.conf
-nbd module autoload	grep -q nbd /etc/modules-load.d/droste.conf

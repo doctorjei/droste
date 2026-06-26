@@ -28,14 +28,16 @@ RUN while IFS= read -r orig && IFS= read -r div && IFS= read -r owner; do \
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
        coreutils grep sed findutils gzip diffutils \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 COPY containers/droste-seed/canopy-restore.txt /tmp/canopy-restore.txt
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
        $(grep -v '^#' /tmp/canopy-restore.txt | grep -v '^$') \
     && rm -f /tmp/canopy-restore.txt \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # droste user (uid/gid 1000, NOPASSWD sudo)
 RUN groupadd -g 1000 droste \

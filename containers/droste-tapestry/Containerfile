@@ -15,7 +15,8 @@ RUN apt-get -qq update \
        drbd-utils sbd dlm-controld open-iscsi targetcli-fb multipath-tools \
        sg3-utils smartmontools apparmor-utils qemu-system-arm \
     && rm -f /tmp/seed-oci-exclude.txt \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Restrict cloud-init datasource probes (NoCloud + ConfigDrive + None)
 COPY oci/cloud-init-droste.cfg /etc/cloud/cloud.cfg.d/99-droste.cfg
@@ -42,11 +43,12 @@ RUN systemctl enable systemd-networkd.service \
 # Disable HA/storage daemons that fail or are pointless on boot inside an
 # LXC (sbd needs configured fencing; rtslib-fb-targetctl needs target_core_mod;
 # openvswitch-switch can't load its datapath kernel module in a container;
-# bird needs a configured router-id / is a lab routing tool).
+# bird needs a configured router-id / is a lab routing tool;
+# dlm is the corosync cluster lock manager and fails with no cluster).
 # Packages stay installed (test tools) — just no boot auto-start. The wool/VM
 # siblings re-enable rtslib-fb-targetctl and openvswitch-switch; sbd and bird
 # stay disabled everywhere.
-RUN systemctl disable sbd.service sbd_remote.service rtslib-fb-targetctl.service openvswitch-switch.service bird.service dnsmasq.service
+RUN systemctl disable sbd.service sbd_remote.service dlm.service rtslib-fb-targetctl.service openvswitch-switch.service bird.service dnsmasq.service
 
 # Kento (OCI → LXC/VM lifecycle tool)
 RUN pipx install --global kento

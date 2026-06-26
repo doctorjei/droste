@@ -15,6 +15,7 @@ RUN apt-get -qq update \
       ncdu \
       hping3 bmon nethogs nicstat ethtool \
       lshw sysbench picocom \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 USER droste

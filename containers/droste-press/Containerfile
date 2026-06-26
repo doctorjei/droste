@@ -18,7 +18,8 @@ RUN apt-get -qq update \
       python3-build \
       poppler-utils git-lfs \
       bat git-delta \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # ── bat convenience symlink (Debian ships bat as batcat) ──
 RUN ln -sf /usr/bin/batcat /usr/local/bin/bat

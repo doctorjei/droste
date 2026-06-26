@@ -45,7 +45,8 @@ RUN apt-get -qq update \
       xxd \
       # Python packaging + libs
       python3-pip python3-venv python3-tomli-w python3-passlib \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # ── Python micro-tools ──────────────────────────────────────────
 COPY ansible/files/pystrings /usr/local/bin/pystrings

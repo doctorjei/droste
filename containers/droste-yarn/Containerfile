@@ -13,7 +13,8 @@ RUN apt-get -qq update \
        lvm2 thin-provisioning-tools nbd-client quota pciutils hdparm \
        dmidecode bridge-utils \
     && rm -f /tmp/seed-oci-exclude.txt \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Restrict cloud-init datasource probes (NoCloud + ConfigDrive + None)
 COPY oci/cloud-init-droste.cfg /etc/cloud/cloud.cfg.d/99-droste.cfg

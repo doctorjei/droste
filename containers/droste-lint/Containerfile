@@ -12,7 +12,8 @@ RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
        $(grep -v '^#' /tmp/seed-oci-exclude.txt | grep -v '^$') \
     && rm -f /tmp/seed-oci-exclude.txt \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Restrict cloud-init datasource probes (NoCloud + ConfigDrive + None)
 COPY oci/cloud-init-droste.cfg /etc/cloud/cloud.cfg.d/99-droste.cfg

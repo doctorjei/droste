@@ -17,11 +17,13 @@ RUN apt-get -qq update \
       arp-scan tcpreplay \
       blktrace xorriso ipmitool \
       python3-pytest \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # tshark installed individually (large package, ~124 MB)
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends tshark \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 USER droste

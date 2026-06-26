@@ -16,7 +16,8 @@ RUN apt-get -qq update \
        qemu-system-x86 virtiofsd swtpm ovmf libvirt-daemon-system virtinst nbdkit \
        nfs-kernel-server cpu-checker irqbalance linux-cpupower \
        fence-agents numactl auditd \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # VM kernel module config
 RUN printf 'options kvm_intel nested=1\noptions kvm_amd nested=1\n' \
