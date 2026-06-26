@@ -2,6 +2,3 @@
 output-droste-*/
 output/
 download/
-
-# Vault secrets
-vault/share-rw/
