@@ -282,6 +282,14 @@ or re-extracting any image data. The OCI layers are read-only and shared.
 On Proxmox hosts, kento auto-detects PVE and uses `pct` instead of `lxc-*`
 commands. Use `--vmid` to set the Proxmox container ID.
 
+> **System tiers need nesting enabled to boot cleanly as an LXC.** Without
+> `nesting=1` (or a privileged container), the host AppArmor profile denies the
+> container's user-namespace creation, and systemd-257's core units (journald,
+> logind, systemd-networkd, resolved) cascade-fail — the container never gets an
+> IP and appears unreachable. Kento's `--nesting` defaults to true; on other
+> provisioning paths, set LXC `features:nesting=1` (or the equivalent
+> `allow_nesting`) to resolve it.
+
 ## Running VMs
 
 VM mode requires [kento](https://pypi.org/project/kento/) and
@@ -322,6 +330,43 @@ All system container options apply, plus:
 |------|---------|---------|
 | `--vm` | — | Enable VM mode (required) |
 | `--port` | auto (10022+) | SSH port mapping (host:guest) |
+
+### Nesting an LXC inside a droste VM
+
+When you boot a nested LXC container *inside* a running droste VM (for example
+with `kento` from a wool L2+ tier), the VM's root filesystem is exposed to the
+guest over **virtiofs**. overlayfs can't use a virtiofs directory as its writable
+`upperdir` — virtiofs doesn't provide the features overlay needs for the upper
+layer (`O_TMPFILE`, `RENAME_WHITEOUT`, `trusted.*` xattrs). The nested container's
+overlay mount therefore fails at pre-start.
+
+**Symptom.** The overlay mount returns rc 32, with the kernel log showing
+`overlayfs: upper fs missing required features` /
+`does not support tmpfile` / `RENAME_WHITEOUT`. The outer, generic symptom is:
+
+```
+lxc-start: … wait_on_daemonized_start: Failed to receive the container state
+```
+
+This is not an image bug — **lowerdirs** on virtiofs are fine; only the writable
+upper/work directories need a filesystem with the required features.
+
+**Fix.** Before creating the nested container, mount a real filesystem at the
+overlay upper/work location. Kento places each nested container's `upperdir` and
+`workdir` under `/var/lib/lxc/<name>`, so a single mount at `/var/lib/lxc` covers
+all nested containers:
+
+```bash
+mount -t tmpfs -o size=16m none /var/lib/lxc
+```
+
+A booted, idle nested container's upper layer is ~1.6 MB, so 8 MB is enough to
+boot and 16 MB is a comfortable default. tmpfs suits this well since the upper is
+ephemeral. For a write-heavy nested workload, back the location with a sparse
+loopback ext4 instead of tmpfs.
+
+The discriminator when debugging: an overlay upper on virtiofs fails the mount
+with rc 32, while the same upper on tmpfs or ext4 mounts with rc 0.
 
 ## Tier Selection Guide
 
