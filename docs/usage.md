@@ -348,6 +348,10 @@ overlay mount therefore fails at pre-start.
 lxc-start: … wait_on_daemonized_start: Failed to receive the container state
 ```
 
+That generic line is all `lxc-start` itself reports — it never names overlay or
+virtiofs. The real cause surfaces only in the pre-start hook's output and in
+`dmesg`, so read both before chasing the `lxc-start` message.
+
 This is not an image bug — **lowerdirs** on virtiofs are fine; only the writable
 upper/work directories need a filesystem with the required features.
 
@@ -364,6 +368,14 @@ A booted, idle nested container's upper layer is ~1.6 MB, so 8 MB is enough to
 boot and 16 MB is a comfortable default. tmpfs suits this well since the upper is
 ephemeral. For a write-heavy nested workload, back the location with a sparse
 loopback ext4 instead of tmpfs.
+
+**Why `/var/lib/lxc`.** Kento's state directory falls back to
+`/var/lib/lxc/<name>` when `$HOME` is unset — the usual case for env-cleared
+runs such as a systemd unit or a test harness that scrubs the environment — so
+that is where the upper and work directories land. To relocate only the
+writable layer instead of mounting over `/var/lib/lxc` wholesale, point
+`KENTO_STATE_DIR` at a directory on a filesystem that already has the required
+features.
 
 The discriminator when debugging: an overlay upper on virtiofs fails the mount
 with rc 32, while the same upper on tmpfs or ext4 mounts with rc 0.
